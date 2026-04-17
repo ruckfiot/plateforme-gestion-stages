@@ -1,12 +1,16 @@
-import React from 'react';
-import Login from './pages/Login'; // On importe ta page
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+// On pointe maintenant vers le dossier pages !
+import Login from './pages/Login'; 
+import Dashboard from './pages/Dashboard'; 
 
 function App() {
   return (
-    <div>
-      {/* Pour l'instant, on n'affiche que la page de connexion */}
-      <Login />
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
