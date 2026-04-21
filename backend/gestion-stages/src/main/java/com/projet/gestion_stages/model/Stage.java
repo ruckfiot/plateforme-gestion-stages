@@ -16,6 +16,18 @@ public class Stage {
     private String duree;
     private String objectif;
     private String etat; // En cours, Terminé, Validé, Refusé
+    private String nomTuteur;
+    private String prenomTuteur;
+
+    @JsonProperty("nomTuteur")
+    public String getNomTuteur() {
+        return tuteur != null ? tuteur.getNomEnseignant() : "";
+    }
+
+    @JsonProperty("prenomTuteur")
+    public String getPrenomTuteur() {
+        return tuteur != null ? tuteur.getPrenomEnseignant() : "";
+    }
 
     @ManyToOne
     @JoinColumn(name = "idApprenant")

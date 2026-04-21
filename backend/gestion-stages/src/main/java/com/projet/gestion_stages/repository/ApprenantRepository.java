@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ApprenantRepository extends JpaRepository<Apprenant, Long> {
-    // Spring Boot te donne déjà save(), findAll(), findById(), deleteById() gratuitement !
+    Optional<Apprenant> findByUtilisateurEmail(String email);
 }

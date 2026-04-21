@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface AdministrateurRepository extends JpaRepository<Administrateur, Long> {
-    // Méthodes magiques fournies par Spring Data JPA
+    Optional<ADmin> findByUtilisateurEmail(String email);
 }

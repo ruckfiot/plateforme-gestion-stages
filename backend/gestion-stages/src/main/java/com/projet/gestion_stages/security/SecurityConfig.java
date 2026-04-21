@@ -38,6 +38,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                 // On autorise l'accès à la documentation Swagger sans token
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/api/entreprises/**").hasRole("ADMIN")
+                .requestMatchers("/api/stages/**").hasAnyRole("ADMIN", "ENSEIGNANT", "APPRENANT")
+                .permitAll() // Pour login/register
                 // Toutes les autres requêtes nécessiteront d'être connecté
                 .anyRequest().authenticated()
             );

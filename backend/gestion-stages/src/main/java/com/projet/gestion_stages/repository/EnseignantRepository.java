@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface EnseignantRepository extends JpaRepository<Enseignant, Long> {
-    // Fournit les méthodes CRUD de base 
+    Optional<Enseignant> findByUtilisateurEmail(String email);
 }
