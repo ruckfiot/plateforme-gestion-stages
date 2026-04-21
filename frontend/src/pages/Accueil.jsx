@@ -11,11 +11,9 @@ const Accueil = () => {
     navigate('/');
   };
 
-  // OUTIL DE TEST POUR LE RENDU
   const switchRole = (newRole) => {
     const updatedUser = { ...user, role: newRole };
     setUser(updatedUser);
-    // On met à jour le localStorage pour que les autres pages voient aussi le changement
     localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
@@ -34,17 +32,22 @@ const Accueil = () => {
         ];
       case 'APPRENANT':
         return [
-          { title: 'Mon Stage', desc: 'Consulter mon suivi et mon tuteur', path: '/stages' },
-          { title: 'Déposer mon rapport', desc: 'Uploader mon fichier PDF', path: '/stages' }
+          { title: 'Mon Espace Stage', desc: 'Consulter mon suivi, déposer mon rapport et voir mes notes', path: '/stages' }
         ];
       default: return [];
     }
   };
 
   return (
-    <div style={{ padding: '40px', maxWidth: '1000px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+    <div style={{ 
+      padding: '40px', 
+      width: '100%',             /* <-- CORRECTION: Force la largeur */
+      maxWidth: '1000px', 
+      boxSizing: 'border-box',   /* <-- CORRECTION: Gère le padding proprement */
+      margin: '0 auto', 
+      fontFamily: 'sans-serif' 
+    }}>
       
-      {/* BARRE DE TEST (A supprimer avant le rendu final, mais génial pour tes screenshots) */}
       <div style={{ backgroundColor: '#1a1a1a', padding: '10px', borderRadius: '8px', marginBottom: '20px', textAlign: 'center', border: '1px dashed #555' }}>
         <span style={{ color: '#aaa', marginRight: '15px', fontSize: '12px' }}>MODE TEST :</span>
         <button onClick={() => switchRole('ADMIN')} style={{ marginRight: '5px', fontSize: '11px', cursor: 'pointer' }}>Admin</button>
@@ -52,6 +55,7 @@ const Accueil = () => {
         <button onClick={() => switchRole('APPRENANT')} style={{ fontSize: '11px', cursor: 'pointer' }}>Apprenant</button>
       </div>
 
+      {/* L'en-tête restera maintenant toujours espacé au maximum */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '50px', borderBottom: '1px solid #444', paddingBottom: '20px' }}>
         <div>
           <h1 style={{ margin: 0, color: '#ffffff', fontSize: '32px' }}>Accueil Espace {user?.role}</h1>

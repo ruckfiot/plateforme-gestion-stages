@@ -3,32 +3,41 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Accueil from './pages/Accueil';
 import Stages from './pages/Stages';
+import Entreprises from './pages/Entreprises';
+import Utilisateurs from './pages/Utilisateurs';
+import Evaluations from './pages/Evaluations'; // NOUVEL IMPORT
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public */}
+        {/* Route Publique */}
         <Route path="/" element={<Login />} />
         
-        {/* Privé : Accueil (Le Hub) */}
+        {/* Routes Privées */}
         <Route 
           path="/accueil" 
-          element={
-            <ProtectedRoute>
-              <Accueil />
-            </ProtectedRoute>
-          } 
+          element={<ProtectedRoute><Accueil /></ProtectedRoute>} 
         />
         
-        {/* Privé : Liste des stages */}
         <Route 
           path="/stages" 
-          element={
-            <ProtectedRoute>
-              <Stages />
-            </ProtectedRoute>
-          } 
+          element={<ProtectedRoute><Stages /></ProtectedRoute>} 
+        />
+
+        <Route 
+          path="/entreprises" 
+          element={<ProtectedRoute><Entreprises /></ProtectedRoute>} 
+        />
+
+        <Route 
+          path="/utilisateurs" 
+          element={<ProtectedRoute><Utilisateurs /></ProtectedRoute>} 
+        />
+
+        <Route 
+          path="/evaluations" 
+          element={<ProtectedRoute><Evaluations /></ProtectedRoute>} 
         />
       </Routes>
     </BrowserRouter>

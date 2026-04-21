@@ -52,17 +52,17 @@
 
 body {
   margin: 0;
+  padding: 0;
+  background-color: #1a1a1a; /* Force le fond sombre sur tout l'écran */
+  color: #ffffff;
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
+  width: 100%;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
+  justify-content: flex-start; /* Force tout le contenu à rester en haut */
   box-sizing: border-box;
 }
 
