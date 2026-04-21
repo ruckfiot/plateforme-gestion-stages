@@ -1,20 +1,32 @@
-import ProtectedRoute from './components/ProtectedRoute';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Login from './pages/Login'; 
-import Dashboard from './pages/Dashboard'; 
+import ProtectedRoute from './components/ProtectedRoute';
+import Login from './pages/Login';
+import Accueil from './pages/Accueil';
+import Stages from './pages/Stages';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public */}
         <Route path="/" element={<Login />} />
         
-        {/* On enveloppe le Dashboard avec notre vigile */}
+        {/* Privé : Accueil (Le Hub) */}
         <Route 
-          path="/dashboard" 
+          path="/accueil" 
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <Accueil />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Privé : Liste des stages */}
+        <Route 
+          path="/stages" 
+          element={
+            <ProtectedRoute>
+              <Stages />
             </ProtectedRoute>
           } 
         />

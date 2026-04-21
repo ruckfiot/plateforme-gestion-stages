@@ -20,7 +20,7 @@ const Login = () => {
       await authService.login(email, password);
 
       // 2. Si le backend dit "OK" (pas d'erreur), on téléporte l'utilisateur !
-      navigate('/dashboard');
+      navigate('/accueil');
 
     } catch (err) {
       // 3. Si le backend renvoie une erreur (ex: 401 Unauthorized), on l'affiche
