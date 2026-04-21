@@ -1,5 +1,5 @@
+import ProtectedRoute from './components/ProtectedRoute';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-// On pointe maintenant vers le dossier pages !
 import Login from './pages/Login'; 
 import Dashboard from './pages/Dashboard'; 
 
@@ -8,7 +8,16 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        
+        {/* On enveloppe le Dashboard avec notre vigile */}
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
     </BrowserRouter>
   );
