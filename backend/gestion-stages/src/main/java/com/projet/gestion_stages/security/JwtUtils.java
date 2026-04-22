@@ -9,6 +9,7 @@ import java.util.Date;
 @Component
 public class JwtUtils {
 
+    // Clé secrète pour signer les tokens (en production, à mettre dans application.properties)
     private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
     private final int jwtExpirationMs = 86400000; // 24 heures
 

@@ -50,6 +50,7 @@ public class SoutenanceController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('ENSEIGNANT')")
     public ResponseEntity<?> updateSoutenance(@PathVariable Long id, @RequestBody Soutenance detailsSoutenance) {
         return soutenanceRepository.findById(id).map(soutenance -> {
+            // ⚠️ Adapte ces setters selon ton fichier Soutenance.java !
             soutenance.setDateSoutenance(detailsSoutenance.getDateSoutenance());
             soutenance.setSalle(detailsSoutenance.getSalle());
             

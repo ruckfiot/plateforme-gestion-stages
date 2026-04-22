@@ -49,14 +49,16 @@ public class AuthTokenFilter extends OncePerRequestFilter {
             System.err.println("Impossible de définir l'authentification de l'utilisateur : " + e.getMessage());
         }
 
+        // On passe à la suite (la route demandée)
         filterChain.doFilter(request, response);
     }
 
+    // Petite méthode pour extraire proprement le token de l'en-tête "Authorization"
     private String parseJwt(HttpServletRequest request) {
         String headerAuth = request.getHeader("Authorization");
 
         if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
-            return headerAuth.substring(7);
+            return headerAuth.substring(7); // On enlève le mot "Bearer " pour ne garder que le token
         }
 
         return null;
