@@ -53,12 +53,11 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    // Petite méthode pour extraire proprement le token de l'en-tête "Authorization"
     private String parseJwt(HttpServletRequest request) {
         String headerAuth = request.getHeader("Authorization");
 
         if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
-            return headerAuth.substring(7); // On enlève le mot "Bearer " pour ne garder que le token
+            return headerAuth.substring(7);
         }
 
         return null;
