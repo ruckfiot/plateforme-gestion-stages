@@ -156,7 +156,7 @@ public class StageService {
         rapport.setNomFichier(nomFichier);
         rapport.setDateDepot(LocalDate.now());
         rapport.setStage(stage);
-        rapportService.createRapport(rapport);  // ✅ FIX
+        rapportService.createRapport(rapport); 
         
         // Met à jour état stage
         stage.setEtat("RAPPORT_DEPOSE");

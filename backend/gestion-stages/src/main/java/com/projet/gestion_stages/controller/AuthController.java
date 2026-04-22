@@ -54,7 +54,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    @Transactional // Si ça crash, Spring effacera l'utilisateur automatiquement !
+    @Transactional 
     public ResponseEntity<?> registerUser(@RequestBody RegisterRequest signUpRequest) {
         
         try {
@@ -109,7 +109,6 @@ public class AuthController {
         }
     }
 
-    // -- LA ROUTE DE LOGIN RESTE EXACTEMENT PAREILLE EN DESSOUS (JE L'AI COUPÉE ICI POUR ALLÉGER) --
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         try {
