@@ -7,17 +7,16 @@ import java.time.LocalDate;
 @Entity
 @Data
 public class Rapport {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idRapport;
-
+    
     private String nomFichier;
     private LocalDate dateDepot;
     private Double noteRapport;
     private String commentaire;
-    private String etat;
-
+    private String etat = "DEPOSE";
+    
     @OneToOne
     @JoinColumn(name = "idStage")
     private Stage stage;

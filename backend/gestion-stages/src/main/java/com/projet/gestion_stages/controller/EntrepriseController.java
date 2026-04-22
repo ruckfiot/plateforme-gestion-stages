@@ -1,71 +1,65 @@
 package com.projet.gestion_stages.controller;
 
 import com.projet.gestion_stages.model.Entreprise;
-import com.projet.gestion_stages.repository.EntrepriseRepository;
+import com.projet.gestion_stages.service.EntrepriseService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/entreprises")
 @CrossOrigin(origins = "*")
+@PreAuthorize("hasRole('ADMIN')")
 public class EntrepriseController {
-
-    private final EntrepriseRepository entrepriseRepository;
-
-    public EntrepriseController(EntrepriseRepository entrepriseRepository) {
-        this.entrepriseRepository = entrepriseRepository;
+    
+    private final EntrepriseService service;
+    
+    public EntrepriseController(EntrepriseService service) {
+        this.service = service;
     }
-
-    // 1. Lire toutes les entreprises (Accessible à tous les connectés)
+    
     @GetMapping
-    public List<Entreprise> getAllEntreprises() {
-        return entrepriseRepository.findAll();
+    public ResponseEntity<List<Entreprise>> getAll() {
+        return ResponseEntity.ok(service.getAllEntreprises());
     }
-
-    // 2. Lire une entreprise spécifique
+    
+    @GetMapping("/search")
+    public ResponseEntity<List<Entreprise>> search(@RequestParam String query) {
+        return ResponseEntity.ok(service.searchEntreprises(query));
+    }
+    
     @GetMapping("/{id}")
-    public ResponseEntity<Entreprise> getEntrepriseById(@PathVariable Long id) {
-        return entrepriseRepository.findById(id)
+    public ResponseEntity<Entreprise> getById(@PathVariable Long id) {
+        return service.getEntrepriseById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
-
-    // 3. Ajouter une entreprise (Seuls Admin et Enseignant)
+    
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('ENSEIGNANT')")
-    public ResponseEntity<?> createEntreprise(@RequestBody Entreprise entreprise) {
+    public ResponseEntity<Map<String, Object>> create(@RequestBody Entreprise entreprise) {
         try {
-            Entreprise savedEntreprise = entrepriseRepository.save(entreprise);
-            return ResponseEntity.ok(savedEntreprise);
+            Entreprise saved = service.createEntreprise(entreprise);
+            return ResponseEntity.ok(Map.of("success", true, "entreprise", saved));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Erreur lors de la création : " + e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
         }
     }
-
-    // 4. Modifier une entreprise (Seuls Admin et Enseignant)
+    
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('ENSEIGNANT')")
-    public ResponseEntity<?> updateEntreprise(@PathVariable Long id, @RequestBody Entreprise detailsEntreprise) {
-        return entrepriseRepository.findById(id).map(entreprise -> {
-            entreprise.setRaisonSociale(detailsEntreprise.getRaisonSociale());
-            entreprise.setAdresse(detailsEntreprise.getAdresse());
-            entreprise.setContact(detailsEntreprise.getContact());
-            
-            Entreprise updatedEntreprise = entrepriseRepository.save(entreprise);
-            return ResponseEntity.ok(updatedEntreprise);
-        }).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Map<String, Object>> update(@PathVariable Long id, @RequestBody Entreprise details) {
+        return service.updateEntreprise(id, details)
+                .map(e -> ResponseEntity.ok(Map.of("success", true, "entreprise", e)))
+                .orElse(ResponseEntity.notFound().build());
     }
-
-    // 5. Supprimer une entreprise (Seul l'Admin a ce droit extrême)
+    
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> deleteEntreprise(@PathVariable Long id) {
-        return entrepriseRepository.findById(id).map(entreprise -> {
-            entrepriseRepository.delete(entreprise);
-            return ResponseEntity.ok("Entreprise supprimée avec succès.");
-        }).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Map<String, Object>> delete(@PathVariable Long id) {
+        if (service.deleteEntreprise(id)) {
+            return ResponseEntity.ok(Map.of("success", true, "message", "Supprimé"));
+        }
+        return ResponseEntity.notFound().build();
     }
 }
