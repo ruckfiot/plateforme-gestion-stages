@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import entreprisesService from '../services/entrepriseService';
 import authService from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,40 +12,54 @@ const Entreprises = () => {
     navigate('/');
   };
 
-  // --- ÉTAT : LISTE DES ENTREPRISES (SIMULATION BDD) ---
-  const [entreprises, setEntreprises] = useState([
-    { id: 1, nom: "TechCorp", secteur: "Informatique", contact: "contact@techcorp.fr", adresse: "12 rue de la Paix, Paris" },
-    { id: 2, nom: "DataSync", secteur: "Big Data", contact: "hr@datasync.io", adresse: "45 avenue Jean Jaurès, Lyon" },
-    { id: 3, nom: "WebSolutions", secteur: "Digital", contact: "info@websolutions.com", adresse: "8 place de la Bourse, Bordeaux" },
-  ]);
+  // --- ÉTAT DYNAMIQUE ---
+  const [entreprises, setEntreprises] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // --- ÉTATS DES MODALES ET RECHERCHE ---
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editModalData, setEditModalData] = useState(null); 
-  const [searchQuery, setSearchQuery] = useState(''); // État pour la barre de recherche
+  const [searchQuery, setSearchQuery] = useState(''); 
 
   const [createFormData, setCreateFormData] = useState({
-    nom: '', secteur: '', contact: '', adresse: ''
+    raisonSociale: '', contact: '', adresse: ''
   });
 
-  // --- ACTIONS VERS LE BACKEND (SIMULÉES) ---
+  // Appel au Backend au chargement de la page
+  useEffect(() => {
+    const fetchEntreprises = async () => {
+      try {
+        // On utilise la fonction de Gaétan (qui s'appelle getAllStages suite au copier-coller)
+        const data = await entreprisesService.getAllStages(); 
+        setEntreprises(data);
+      } catch (error) {
+        console.error("Erreur lors de la récupération des entreprises :", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEntreprises();
+  }, []);
+
+  // --- ACTIONS VERS LE BACKEND (SIMULÉES POUR LA CRÉATION/MODIF POUR LE MOMENT) ---
   const handleCreateSubmit = (e) => {
     e.preventDefault();
-    const newEnt = { id: Date.now(), ...createFormData };
+    const newEnt = { idEntreprise: Date.now(), ...createFormData };
     setEntreprises([...entreprises, newEnt]);
     setIsCreateOpen(false);
-    setCreateFormData({ nom: '', secteur: '', contact: '', adresse: '' });
+    setCreateFormData({ raisonSociale: '', contact: '', adresse: '' });
   };
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
-    setEntreprises(entreprises.map(ent => ent.id === editModalData.id ? editModalData : ent));
+    setEntreprises(entreprises.map(ent => ent.idEntreprise === editModalData.idEntreprise ? editModalData : ent));
     setEditModalData(null);
   };
 
   const handleDelete = (id) => {
     if (window.confirm("Supprimer cette entreprise ? Cela pourrait impacter les stages liés.")) {
-      setEntreprises(entreprises.filter(ent => ent.id !== id));
+      setEntreprises(entreprises.filter(ent => ent.idEntreprise !== id));
     }
   };
 
@@ -53,10 +68,9 @@ const Entreprises = () => {
   if (searchQuery) {
     const lowerCaseQuery = searchQuery.toLowerCase();
     displayedEntreprises = entreprises.filter(ent => 
-      ent.nom.toLowerCase().includes(lowerCaseQuery) ||
-      ent.secteur.toLowerCase().includes(lowerCaseQuery) ||
-      ent.adresse.toLowerCase().includes(lowerCaseQuery) ||
-      ent.contact.toLowerCase().includes(lowerCaseQuery)
+      (ent.raisonSociale && ent.raisonSociale.toLowerCase().includes(lowerCaseQuery)) ||
+      (ent.adresse && ent.adresse.toLowerCase().includes(lowerCaseQuery)) ||
+      (ent.contact && ent.contact.toLowerCase().includes(lowerCaseQuery))
     );
   }
 
@@ -65,6 +79,14 @@ const Entreprises = () => {
   const modalStyle = { backgroundColor: '#2c2f33', padding: '30px', borderRadius: '10px', width: '400px', borderTop: '5px solid #2ecc71', boxShadow: '0 15px 25px rgba(0,0,0,0.5)' };
   const inputStyle = { width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #555', backgroundColor: '#1e2124', color: '#fff', boxSizing: 'border-box', marginBottom: '15px' };
   const labelStyle = { color: '#aaa', fontSize: '13px', display: 'block', marginBottom: '5px' };
+
+  if (loading) {
+    return (
+      <div style={{ padding: '40px', color: '#fff', backgroundColor: '#1a1a1a', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+        Connexion au serveur et chargement des entreprises...
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: '40px', width: '100%', maxWidth: '1100px', boxSizing: 'border-box', margin: '0 auto', fontFamily: 'sans-serif', textAlign: 'left' }}>
@@ -85,7 +107,7 @@ const Entreprises = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', alignItems: 'center' }}>
         <input 
           type="text" 
-          placeholder="Rechercher une entreprise (nom, secteur, adresse)..." 
+          placeholder="Rechercher une entreprise (nom, adresse, contact)..." 
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{ padding: '10px 15px', borderRadius: '6px', border: '1px solid #444', backgroundColor: '#2c2f33', color: 'white', width: '350px' }} 
@@ -102,8 +124,7 @@ const Entreprises = () => {
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #444', color: '#aaaaaa' }}>
-              <th style={{ padding: '15px 10px', fontWeight: 'normal' }}>Nom</th>
-              <th style={{ padding: '15px 10px', fontWeight: 'normal' }}>Secteur</th>
+              <th style={{ padding: '15px 10px', fontWeight: 'normal' }}>Nom (Raison Sociale)</th>
               <th style={{ padding: '15px 10px', fontWeight: 'normal' }}>Adresse</th>
               <th style={{ padding: '15px 10px', fontWeight: 'normal' }}>Contact</th>
               <th style={{ padding: '15px 10px', fontWeight: 'normal' }}>Actions</th>
@@ -112,9 +133,8 @@ const Entreprises = () => {
           <tbody>
             {displayedEntreprises.length > 0 ? (
               displayedEntreprises.map((ent) => (
-                <tr key={ent.id} style={{ borderBottom: '1px solid #444' }}>
-                  <td style={{ padding: '15px 10px', color: '#ffffff', fontWeight: 'bold' }}>{ent.nom}</td>
-                  <td style={{ padding: '15px 10px', color: '#dddddd' }}>{ent.secteur}</td>
+                <tr key={ent.idEntreprise} style={{ borderBottom: '1px solid #444' }}>
+                  <td style={{ padding: '15px 10px', color: '#ffffff', fontWeight: 'bold' }}>{ent.raisonSociale}</td>
                   <td style={{ padding: '15px 10px', color: '#dddddd', fontSize: '14px' }}>{ent.adresse}</td>
                   <td style={{ padding: '15px 10px', color: '#3498db' }}>{ent.contact}</td>
                   <td style={{ padding: '15px 10px' }}>
@@ -124,7 +144,7 @@ const Entreprises = () => {
                       Modifier
                     </button>
                     <button 
-                      onClick={() => handleDelete(ent.id)}
+                      onClick={() => handleDelete(ent.idEntreprise)}
                       style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#e74c3c', color: '#ffffff', border: 'none', borderRadius: '5px', fontSize: '13px', fontWeight: 'bold' }}>
                       Supprimer
                     </button>
@@ -133,8 +153,8 @@ const Entreprises = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: '#aaaaaa' }}>
-                  Aucune entreprise ne correspond à votre recherche.
+                <td colSpan="4" style={{ padding: '20px', textAlign: 'center', color: '#aaaaaa' }}>
+                  Aucune entreprise n'est enregistrée dans la base de données.
                 </td>
               </tr>
             )}
@@ -149,10 +169,7 @@ const Entreprises = () => {
             <h2 style={{ margin: '0 0 20px 0', color: '#fff' }}>Nouvelle Entreprise</h2>
             <form onSubmit={handleCreateSubmit}>
               <label style={labelStyle}>Nom (Raison Sociale)</label>
-              <input type="text" required style={inputStyle} value={createFormData.nom} onChange={(e) => setCreateFormData({...createFormData, nom: e.target.value})} />
-              
-              <label style={labelStyle}>Secteur d'activité</label>
-              <input type="text" required style={inputStyle} value={createFormData.secteur} onChange={(e) => setCreateFormData({...createFormData, secteur: e.target.value})} />
+              <input type="text" required style={inputStyle} value={createFormData.raisonSociale} onChange={(e) => setCreateFormData({...createFormData, raisonSociale: e.target.value})} />
               
               <label style={labelStyle}>Email de contact</label>
               <input type="email" required style={inputStyle} value={createFormData.contact} onChange={(e) => setCreateFormData({...createFormData, contact: e.target.value})} />
@@ -176,10 +193,7 @@ const Entreprises = () => {
             <h2 style={{ margin: '0 0 20px 0', color: '#fff' }}>Modifier l'entreprise</h2>
             <form onSubmit={handleEditSubmit}>
               <label style={labelStyle}>Nom (Raison Sociale)</label>
-              <input type="text" required style={inputStyle} value={editModalData.nom} onChange={(e) => setEditModalData({...editModalData, nom: e.target.value})} />
-              
-              <label style={labelStyle}>Secteur d'activité</label>
-              <input type="text" required style={inputStyle} value={editModalData.secteur} onChange={(e) => setEditModalData({...editModalData, secteur: e.target.value})} />
+              <input type="text" required style={inputStyle} value={editModalData.raisonSociale} onChange={(e) => setEditModalData({...editModalData, raisonSociale: e.target.value})} />
               
               <label style={labelStyle}>Email de contact</label>
               <input type="email" required style={inputStyle} value={editModalData.contact} onChange={(e) => setEditModalData({...editModalData, contact: e.target.value})} />
