@@ -3,13 +3,13 @@ import axios from 'axios';
 // L'URL exacte de l'API de ton collègue
 const API_URL = 'http://localhost:8080/api/auth';
 
-const login = async (email, password) => {
+const login = async (email, motDePasse) => {
   // On envoie la requête avec les bonnes clés (motDePasse) et les bons headers
   const response = await axios.post(`${API_URL}/login`, 
     // 1. Les données au format attendu par Spring Boot
     {
       email: email,
-      motDePasse: password
+      motDePasse: motDePasse
     },
     // 2. Les headers pour forcer la lecture en JSON
     {

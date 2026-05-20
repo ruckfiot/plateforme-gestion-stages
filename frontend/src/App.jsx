@@ -5,7 +5,7 @@ import Accueil from './pages/Accueil';
 import Stages from './pages/Stages';
 import Entreprises from './pages/Entreprises';
 import Utilisateurs from './pages/Utilisateurs';
-import Evaluations from './pages/Evaluations'; // NOUVEL IMPORT
+import Evaluations from './pages/Evaluations';
 
 function App() {
   return (
