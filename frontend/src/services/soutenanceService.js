@@ -1,18 +1,18 @@
-import api from './api'; 
+import api from './api';
 
-const getAllStages = async () => {
+const getAllSoutenances = async () => {
   const response = await api.get('/soutenances');
   return response.data;
 };
 
-const createStage = async (stageData) => {
-  const response = await api.post('/soutenances', stageData);
+const programmerSoutenance = async (soutenanceData) => {
+  const response = await api.post('/soutenances', soutenanceData);
   return response.data;
 };
 
-const stageService = {
-  getAllStages,
-  createStage
+const soutenanceService = {
+  getAllSoutenances,
+  programmerSoutenance,
 };
 
-export default stageService;
+export default soutenanceService;

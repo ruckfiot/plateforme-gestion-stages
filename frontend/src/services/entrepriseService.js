@@ -1,18 +1,30 @@
-import api from './api'; 
+import api from './api';
 
-const getAllStages = async () => {
+const getAllEntreprises = async () => {
   const response = await api.get('/entreprises');
   return response.data;
 };
 
-const createStage = async (stageData) => {
-  const response = await api.post('/entreprises', stageData);
+const createEntreprise = async (entrepriseData) => {
+  const response = await api.post('/entreprises', entrepriseData);
   return response.data;
 };
 
-const stageService = {
-  getAllStages,
-  createStage
+const deleteEntreprise = async (id) => {
+  const response = await api.delete(`/entreprises/${id}`);
+  return response.data;
 };
 
-export default stageService;
+const updateEntreprise = async (id, entrepriseData) => {
+  const response = await api.put(`/entreprises/${id}`, entrepriseData);
+  return response.data;
+};
+
+const entrepriseService = {
+  getAllEntreprises,
+  createEntreprise,
+  updateEntreprise,
+  deleteEntreprise,
+};
+
+export default entrepriseService;
