@@ -226,11 +226,29 @@ const Utilisateurs = () => {
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>Prénom</label>
-                  <input type="text" required style={inputStyle} value={editModalData.prenom || ''} onChange={(e) => setEditModalData({...editModalData, prenom: e.target.value})} />
+                  <input 
+                    type="text" 
+                    required 
+                    style={inputStyle} 
+                    value={tab === 'eleves' ? (editModalData.prenomApprenant || '') : (editModalData.prenomEnseignant || '')} 
+                    onChange={(e) => {
+                      if (tab === 'eleves') setEditModalData({...editModalData, prenomApprenant: e.target.value});
+                      else setEditModalData({...editModalData, prenomEnseignant: e.target.value});
+                    }} 
+                  />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>Nom</label>
-                  <input type="text" required style={inputStyle} value={editModalData.nom || ''} onChange={(e) => setEditModalData({...editModalData, nom: e.target.value})} />
+                  <input 
+                    type="text" 
+                    required 
+                    style={inputStyle} 
+                    value={tab === 'eleves' ? (editModalData.nomApprenant || '') : (editModalData.nomEnseignant || '')} 
+                    onChange={(e) => {
+                      if (tab === 'eleves') setEditModalData({...editModalData, nomApprenant: e.target.value});
+                      else setEditModalData({...editModalData, nomEnseignant: e.target.value});
+                    }} 
+                  />
                 </div>
               </div>
 

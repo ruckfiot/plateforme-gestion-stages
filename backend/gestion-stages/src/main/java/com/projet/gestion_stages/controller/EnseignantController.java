@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@CrossOrigin
 @RequestMapping("/api/enseignants")
 public class EnseignantController {
 
@@ -27,5 +28,20 @@ public class EnseignantController {
     public ResponseEntity<Enseignant> addEnseignant(@RequestBody Enseignant enseignant) {
         Enseignant newEnseignant = enseignantService.createEnseignant(enseignant);
         return new ResponseEntity<>(newEnseignant, HttpStatus.CREATED);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Enseignant> updateEnseignant(@PathVariable Long id, @RequestBody Enseignant enseignantDetails) {
+        return enseignantService.updateEnseignant(id, enseignantDetails)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteEnseignant(@PathVariable Long id) {
+        if(enseignantService.deleteEnseignant(id)) {
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 }
