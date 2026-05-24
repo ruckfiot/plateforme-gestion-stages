@@ -1,129 +1,163 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
+import stageService from '../services/stageService';
+import entrepriseService from '../services/entrepriseService';
+import utilisateurService from '../services/utilisateurService';
 import { useNavigate } from 'react-router-dom';
 
 const Stages = () => {
   const navigate = useNavigate();
   const user = authService.getCurrentUser();
 
+  // --- ÉTATS DYNAMIQUES (VRAIE BDD) ---
+  const [stages, setStages] = useState([]);
+  const [entreprisesList, setEntreprisesList] = useState([]);
+  const [profsList, setProfsList] = useState([]);
+  const [elevesList, setElevesList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // --- CHARGEMENT DES DONNÉES ---
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // On charge le tableau principal
+      const stagesData = await stageService.getAllStages();
+      setStages(stagesData);
+
+      // On charge les listes pour les menus déroulants (si l'utilisateur est Admin)
+      if (user?.role === 'ADMIN') {
+        const entData = await entrepriseService.getAllEntreprises();
+        const profsData = await utilisateurService.getEnseignants();
+        const elevesData = await utilisateurService.getApprenants();
+        
+        setEntreprisesList(entData);
+        setProfsList(profsData);
+        setElevesList(elevesData);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération des données :", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [user?.role]);
+
   const handleLogout = () => {
     authService.logout();
     navigate('/');
   };
-
-  // --- FAUSSES DONNÉES ---
-  const [stages, setStages] = useState([
-    { 
-      id: 1, sujet: "Développement d'une API React", entreprise: "TechCorp", 
-      tuteur: "M. Lemoine", etudiant: "Jean Dupont", etat: "en_cours", 
-      rapport: null, noteRapport: null, noteSoutenance: null,
-      dateDebut: "2026-04-01", duree: "6 mois", objectifs: "Créer une API RESTful robuste et sécurisée.", dateSoutenance: "2026-09-15"
-    },
-    { 
-      id: 2, sujet: "Refonte de la base de données", entreprise: "DataSync", 
-      tuteur: "Mme Guerin", etudiant: "Sophie Martin", etat: "valide", 
-      rapport: "rapport_v1.pdf", noteRapport: 16, noteSoutenance: 14,
-      dateDebut: "2026-01-10", duree: "3 mois", objectifs: "Optimiser les requêtes SQL et migrer vers PostgreSQL.", dateSoutenance: "2026-04-20"
-    },
-    { 
-      id: 3, sujet: "Création d'un Dashboard", entreprise: "WebSolutions", 
-      tuteur: "M. Lemoine", etudiant: "Lucas Blanc", etat: "en_attente", 
-      rapport: "cahier_charges.pdf", noteRapport: null, noteSoutenance: null,
-      dateDebut: "2026-05-15", duree: "4 mois", objectifs: "Mettre en place un tableau de bord analytique.", dateSoutenance: "2026-10-01"
-    },
-  ]);
-
-  const entreprisesList = ["TechCorp", "DataSync", "WebSolutions", "DevSoft"];
-  const profsList = ["M. Lemoine", "Mme Guerin", "M. Dubois"];
-  const elevesList = ["Jean Dupont", "Sophie Martin", "Lucas Blanc", "Amélie Petit"];
 
   // --- ÉTATS DES MODALES ET RECHERCHE ---
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [viewModalData, setViewModalData] = useState(null); 
   const [editModalData, setEditModalData] = useState(null); 
   const [searchQuery, setSearchQuery] = useState(''); 
-  const [selectedFile, setSelectedFile] = useState(null); // NOUVEAU : Fichier sélectionné par l'étudiant
+  const [selectedFile, setSelectedFile] = useState(null);
 
   const [createFormData, setCreateFormData] = useState({
-    sujet: '', entreprise: '', tuteur: '', etudiant: '', dateDebut: '', duree: '', objectifs: ''
+    sujet: '', 
+    entrepriseId: '', 
+    tuteurId: '', 
+    etudiantId: '', 
+    dateDebut: '', 
+    duree: '', 
+    objectifs: ''
   });
 
-  // --- ACTIONS SIMULÉES VERS LE BACKEND ---
-  const handleCreateSubmit = (e) => {
+  // --- ACTIONS VERS LE BACKEND ---
+  const handleCreateSubmit = async (e) => {
     e.preventDefault();
-    const newStage = { id: Date.now(), ...createFormData, etat: 'en_attente', rapport: null, noteRapport: null, noteSoutenance: null };
-    setStages([...stages, newStage]);
-    setIsCreateOpen(false);
-    setCreateFormData({ sujet: '', entreprise: '', tuteur: '', etudiant: '', dateDebut: '', duree: '', objectifs: '' });
+    try {
+      const newStage = { 
+        sujet: createFormData.sujet,     
+        objectif: createFormData.objectifs, 
+        dateDebut: createFormData.dateDebut,
+        duree: createFormData.duree,
+        etat: 'EN_ATTENTE',
+        
+        apprenant: { idApprenant: createFormData.etudiantId },
+        entreprise: { idEntreprise: createFormData.entrepriseId },
+        enseignantTuteur: { idEnseignant: createFormData.tuteurId }
+      };
+
+      await stageService.createStage(newStage);
+      fetchData(); // On rafraîchit
+      setIsCreateOpen(false);
+      setCreateFormData({ sujet: '', entrepriseId: '', tuteurId: '', etudiantId: '', dateDebut: '', duree: '', objectifs: '' });
+    } catch (err) {
+      alert("Erreur lors de la création du stage. Vérifiez votre Backend.");
+    }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    setStages(stages.map(s => s.id === editModalData.id ? editModalData : s));
-    setEditModalData(null);
+    try {
+      await stageService.updateStage(editModalData.idStage || editModalData.id, editModalData);
+      fetchData();
+      setEditModalData(null);
+    } catch (err) {
+      alert("Erreur lors de la modification.");
+    }
   };
 
-  // NOUVEAU : LOGIQUE D'UPLOAD DU RAPPORT
+  const handleDelete = async (id) => {
+    if(window.confirm("Êtes-vous sûr de vouloir supprimer définitivement ce stage ?")) {
+      try {
+        await stageService.deleteStage(id);
+        fetchData();
+        setEditModalData(null);
+      } catch (err) {
+        alert("Erreur lors de la suppression.");
+      }
+    }
+  };
+
+  // NOUVEAU : LOGIQUE D'UPLOAD DU RAPPORT (À faire dans un second temps)
   const handleUploadRapport = (e) => {
     e.preventDefault();
     if (!selectedFile) return;
-
-    // TODO: Remplacer par Axios FormData -> axios.post(`/api/stages/${viewModalData.id}/rapport`, formData)
-    const updatedStage = { ...viewModalData, rapport: selectedFile.name };
-    
-    setStages(stages.map(s => s.id === viewModalData.id ? updatedStage : s));
-    setViewModalData(updatedStage); // Met à jour la modale en direct
-    setSelectedFile(null);
-    alert(`Fichier "${selectedFile.name}" téléversé avec succès !`);
-  };
-
-  const handleDelete = (id) => {
-    if(window.confirm("Êtes-vous sûr de vouloir supprimer définitivement ce stage ?")) {
-      setStages(stages.filter(s => s.id !== id));
-      setEditModalData(null);
-    }
+    alert(`Le fichier "${selectedFile.name}" est prêt. L'envoi via FormData nécessitera une route Java spécifique.`);
+    // TODO: Implémenter le FormData quand Java sera prêt
   };
 
   // --- LOGIQUE D'AFFICHAGE SELON LE RÔLE ---
   let displayedStages = stages;
   let titrePage = "Gestion des Stages";
 
+  // ⚠️ Filtrage côté Front : Il faudra l'adapter avec les bons noms d'attributs (ex: stage.enseignantTuteur.idEnseignant)
   if (user?.role === 'ENSEIGNANT') {
     titrePage = "Mes Stages Supervisés";
-    displayedStages = stages.filter(stage => stage.tuteur === "M. Lemoine");
+    // Exemple : displayedStages = stages.filter(stage => stage.enseignantTuteur?.email === user.email);
   } else if (user?.role === 'APPRENANT') {
     titrePage = "Mes Stages";
-    displayedStages = stages.filter(stage => stage.etudiant === "Jean Dupont");
+    // Exemple : displayedStages = stages.filter(stage => stage.apprenant?.utilisateur?.email === user.email);
   }
 
   // --- LOGIQUE DE RECHERCHE ---
   if (searchQuery) {
     const lowerCaseQuery = searchQuery.toLowerCase();
     displayedStages = displayedStages.filter(stage => 
-      stage.sujet.toLowerCase().includes(lowerCaseQuery) ||
-      stage.entreprise.toLowerCase().includes(lowerCaseQuery) ||
-      stage.etudiant.toLowerCase().includes(lowerCaseQuery) ||
-      stage.tuteur.toLowerCase().includes(lowerCaseQuery)
+      (stage.titre && stage.titre.toLowerCase().includes(lowerCaseQuery)) ||
+      (stage.entreprise?.raisonSociale && stage.entreprise.raisonSociale.toLowerCase().includes(lowerCaseQuery))
     );
   }
 
   const renderStatut = (stage) => {
+    const etatActuel = stage.etat || 'EN_ATTENTE';
+
     if (user?.role === 'ENSEIGNANT') {
-      if (stage.noteRapport !== null && stage.noteSoutenance !== null) {
-        return <span style={{ backgroundColor: '#27ae60', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>ÉVALUÉ</span>;
-      } else if (stage.rapport !== null) {
-        return <span style={{ backgroundColor: '#e67e22', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>À NOTER</span>;
-      } else {
-        return <span style={{ backgroundColor: '#7f8c8d', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>ATTENTE RAPPORT</span>;
-      }
+       return <span style={{ backgroundColor: '#e67e22', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>À ÉVALUER</span>;
     } else {
       let bgColor = '#7f8c8d';
-      if (stage.etat === 'valide') bgColor = '#27ae60';
-      if (stage.etat === 'en_cours') bgColor = '#2980b9';
-      if (stage.etat === 'en_attente') bgColor = '#d35400';
+      if (etatActuel.toLowerCase() === 'valide' || etatActuel.toLowerCase() === 'validé') bgColor = '#27ae60';
+      if (etatActuel.toLowerCase() === 'en_cours') bgColor = '#2980b9';
+      if (etatActuel.toLowerCase() === 'en_attente') bgColor = '#d35400';
       
       return <span style={{ backgroundColor: bgColor, color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>
-        {stage.etat.replace('_', ' ').toUpperCase()}
+        {etatActuel.replace('_', ' ').toUpperCase()}
       </span>;
     }
   };
@@ -133,6 +167,8 @@ const Stages = () => {
   const modalStyle = { backgroundColor: '#2c2f33', padding: '30px', borderRadius: '10px', width: '90%', maxWidth: '500px', borderTop: '5px solid #3498db', maxHeight: '90vh', overflowY: 'auto' };
   const inputStyle = { width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #555', backgroundColor: '#1e2124', color: '#fff', boxSizing: 'border-box', marginBottom: '15px' };
   const labelStyle = { color: '#aaa', fontSize: '13px', display: 'block', marginBottom: '5px' };
+
+  if (loading) return <div style={{ padding: '40px', color: '#fff', textAlign: 'center' }}>Chargement des stages...</div>;
 
   return (
     <div style={{ padding: '40px', width: '100%', maxWidth: '1100px', boxSizing: 'border-box', margin: '0 auto', fontFamily: 'sans-serif', textAlign: 'left' }}>
@@ -153,7 +189,7 @@ const Stages = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
         <input 
           type="text" 
-          placeholder="Rechercher un stage (sujet, entreprise, élève)..." 
+          placeholder="Rechercher un stage (sujet, entreprise)..." 
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{ padding: '10px 15px', borderRadius: '6px', border: '1px solid #444', backgroundColor: '#2c2f33', color: 'white', width: '350px' }} 
@@ -180,37 +216,45 @@ const Stages = () => {
           </thead>
           <tbody>
             {displayedStages.length > 0 ? (
-              displayedStages.map((stage) => (
-                <tr key={stage.id} style={{ borderBottom: '1px solid #444' }}>
-                  <td style={{ padding: '15px 10px', color: '#ffffff', fontWeight: 'bold' }}>{stage.sujet}</td>
-                  <td style={{ padding: '15px 10px', color: '#dddddd' }}>{stage.entreprise}</td>
-                  {user?.role !== 'APPRENANT' && <td style={{ padding: '15px 10px', color: '#dddddd' }}>{stage.etudiant}</td>}
-                  {user?.role !== 'ENSEIGNANT' && <td style={{ padding: '15px 10px', color: '#dddddd' }}>{stage.tuteur}</td>}
-                  <td style={{ padding: '15px 10px' }}>{renderStatut(stage)}</td>
-                  
-                  <td style={{ padding: '15px 10px' }}>
-                    {user?.role === 'ADMIN' && (
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <button onClick={() => setViewModalData(stage)} style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#3498db', color: '#ffffff', border: 'none', borderRadius: '5px', fontSize: '13px', fontWeight: 'bold' }}>Voir</button>
-                        <button onClick={() => setEditModalData(stage)} style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#36393f', color: '#ffffff', border: '1px solid #555', borderRadius: '5px', fontSize: '13px' }}>Modifier</button>
-                      </div>
-                    )}
-                    
-                    {user?.role === 'ENSEIGNANT' && (
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <button onClick={() => navigate(`/evaluations?id=${stage.id}`)} style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#f39c12', color: '#ffffff', border: 'none', borderRadius: '5px', fontSize: '13px', fontWeight: 'bold' }}>Évaluer</button>
-                        <button onClick={() => setViewModalData(stage)} style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#3498db', color: '#ffffff', border: 'none', borderRadius: '5px', fontSize: '13px', fontWeight: 'bold' }}>Voir</button>
-                      </div>
-                    )}
+              displayedStages.map((stage) => {
+                const id = stage.idStage || stage.id;
+                // Résolution dynamique des noms selon ton modèle
+                const nomEntreprise = stage.entreprise?.raisonSociale || "Non assignée";
+                const nomEleve = stage.apprenant ? `${stage.apprenant.nomApprenant} ${stage.apprenant.prenomApprenant}` : "Non assigné";
+                const nomTuteur = stage.enseignantTuteur ? `${stage.enseignantTuteur.nomEnseignant} ${stage.enseignantTuteur.prenomEnseignant}` : "Non assigné";
 
-                    {user?.role === 'APPRENANT' && (
-                      <button onClick={() => { setViewModalData(stage); setSelectedFile(null); }} style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#3498db', color: '#ffffff', border: 'none', borderRadius: '5px', fontSize: '13px', fontWeight: 'bold' }}>
-                        Voir mon dossier
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
+                return(
+                  <tr key={id} style={{ borderBottom: '1px solid #444' }}>
+                    <td style={{ padding: '15px 10px', color: '#ffffff', fontWeight: 'bold' }}>{stage.titre || stage.sujet}</td>
+                    <td style={{ padding: '15px 10px', color: '#dddddd' }}>{nomEntreprise}</td>
+                    {user?.role !== 'APPRENANT' && <td style={{ padding: '15px 10px', color: '#dddddd' }}>{nomEleve}</td>}
+                    {user?.role !== 'ENSEIGNANT' && <td style={{ padding: '15px 10px', color: '#dddddd' }}>{nomTuteur}</td>}
+                    <td style={{ padding: '15px 10px' }}>{renderStatut(stage)}</td>
+                    
+                    <td style={{ padding: '15px 10px' }}>
+                      {user?.role === 'ADMIN' && (
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <button onClick={() => setViewModalData(stage)} style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#3498db', color: '#ffffff', border: 'none', borderRadius: '5px', fontSize: '13px', fontWeight: 'bold' }}>Voir</button>
+                          <button onClick={() => setEditModalData(stage)} style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#36393f', color: '#ffffff', border: '1px solid #555', borderRadius: '5px', fontSize: '13px' }}>Modifier</button>
+                        </div>
+                      )}
+                      
+                      {user?.role === 'ENSEIGNANT' && (
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <button onClick={() => navigate(`/evaluations?id=${id}`)} style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#f39c12', color: '#ffffff', border: 'none', borderRadius: '5px', fontSize: '13px', fontWeight: 'bold' }}>Évaluer</button>
+                          <button onClick={() => setViewModalData(stage)} style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#3498db', color: '#ffffff', border: 'none', borderRadius: '5px', fontSize: '13px', fontWeight: 'bold' }}>Voir</button>
+                        </div>
+                      )}
+
+                      {user?.role === 'APPRENANT' && (
+                        <button onClick={() => { setViewModalData(stage); setSelectedFile(null); }} style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#3498db', color: '#ffffff', border: 'none', borderRadius: '5px', fontSize: '13px', fontWeight: 'bold' }}>
+                          Voir mon dossier
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })
             ) : (
               <tr>
                 <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#aaaaaa' }}>Aucun stage ne correspond à votre recherche.</td>
@@ -221,36 +265,39 @@ const Stages = () => {
       </div>
 
       {/* =========================================================
-          MODALE 1 : CRÉER UN STAGE (POST)
+          MODALE 1 : CRÉER UN STAGE (ADMIN)
       ========================================================= */}
       {isCreateOpen && (
         <div style={overlayStyle}>
           <div style={{ ...modalStyle, borderTopColor: '#2ecc71' }}>
             <h2 style={{ margin: '0 0 20px 0', color: '#fff' }}>Créer un nouveau stage</h2>
             <form onSubmit={handleCreateSubmit}>
-              <label style={labelStyle}>Sujet du stage</label>
+              <label style={labelStyle}>Sujet du stage (Titre)</label>
               <input type="text" required style={inputStyle} value={createFormData.sujet} onChange={(e) => setCreateFormData({...createFormData, sujet: e.target.value})} />
+              
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>Élève</label>
-                  <select required style={inputStyle} value={createFormData.etudiant} onChange={(e) => setCreateFormData({...createFormData, etudiant: e.target.value})}>
+                  <select required style={inputStyle} value={createFormData.etudiantId} onChange={(e) => setCreateFormData({...createFormData, etudiantId: e.target.value})}>
                     <option value="">Sélectionner...</option>
-                    {elevesList.map((e, i) => <option key={i} value={e}>{e}</option>)}
+                    {elevesList.map((e) => <option key={e.idApprenant} value={e.idApprenant}>{e.nomApprenant} {e.prenomApprenant}</option>)}
                   </select>
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>Entreprise</label>
-                  <select required style={inputStyle} value={createFormData.entreprise} onChange={(e) => setCreateFormData({...createFormData, entreprise: e.target.value})}>
+                  <select required style={inputStyle} value={createFormData.entrepriseId} onChange={(e) => setCreateFormData({...createFormData, entrepriseId: e.target.value})}>
                     <option value="">Sélectionner...</option>
-                    {entreprisesList.map((e, i) => <option key={i} value={e}>{e}</option>)}
+                    {entreprisesList.map((e) => <option key={e.idEntreprise} value={e.idEntreprise}>{e.raisonSociale}</option>)}
                   </select>
                 </div>
               </div>
+
               <label style={labelStyle}>Tuteur Enseignant</label>
-              <select required style={inputStyle} value={createFormData.tuteur} onChange={(e) => setCreateFormData({...createFormData, tuteur: e.target.value})}>
+              <select required style={inputStyle} value={createFormData.tuteurId} onChange={(e) => setCreateFormData({...createFormData, tuteurId: e.target.value})}>
                 <option value="">Sélectionner...</option>
-                {profsList.map((p, i) => <option key={i} value={p}>{p}</option>)}
+                {profsList.map((p) => <option key={p.idEnseignant} value={p.idEnseignant}>{p.nomEnseignant} {p.prenomEnseignant}</option>)}
               </select>
+
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>Date de début</label>
@@ -261,8 +308,10 @@ const Stages = () => {
                   <input type="text" required style={inputStyle} value={createFormData.duree} onChange={(e) => setCreateFormData({...createFormData, duree: e.target.value})} />
                 </div>
               </div>
-              <label style={labelStyle}>Objectifs</label>
+
+              <label style={labelStyle}>Objectifs / Description</label>
               <textarea required rows="3" style={{ ...inputStyle, resize: 'none' }} value={createFormData.objectifs} onChange={(e) => setCreateFormData({...createFormData, objectifs: e.target.value})}></textarea>
+              
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                 <button type="button" onClick={() => setIsCreateOpen(false)} style={{ padding: '10px 15px', backgroundColor: '#7f8c8d', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Annuler</button>
                 <button type="submit" style={{ padding: '10px 15px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Enregistrer</button>
@@ -273,7 +322,7 @@ const Stages = () => {
       )}
 
       {/* =========================================================
-          MODALE 2 : DETAILS DU STAGE + ZONE DE DEPOT (APPRENANT)
+          MODALE 2 : DÉTAILS DU STAGE (VUE COMMUNE)
       ========================================================= */}
       {viewModalData && (
         <div style={overlayStyle}>
@@ -282,22 +331,33 @@ const Stages = () => {
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', color: '#ddd', fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
               <div style={{ gridColumn: 'span 2', paddingBottom: '10px', borderBottom: '1px solid #444' }}>
-                <span style={{ color: '#aaa', fontSize: '12px', display: 'block' }}>Sujet et Objectifs</span>
-                <b style={{ color: '#fff', fontSize: '16px' }}>{viewModalData.sujet}</b>
-                <p style={{ margin: '5px 0 0 0', fontStyle: 'italic', color: '#bbb' }}>"{viewModalData.objectifs}"</p>
+                <span style={{ color: '#aaa', fontSize: '12px', display: 'block' }}>Sujet et Description</span>
+                <b style={{ color: '#fff', fontSize: '16px' }}>{viewModalData.titre || viewModalData.sujet}</b>
+                <p style={{ margin: '5px 0 0 0', fontStyle: 'italic', color: '#bbb' }}>"{viewModalData.description || viewModalData.objectifs}"</p>
               </div>
-              <div><span style={{ color: '#aaa', display: 'block' }}>Élève :</span> <b>{viewModalData.etudiant}</b></div>
-              <div><span style={{ color: '#aaa', display: 'block' }}>Entreprise :</span> <b>{viewModalData.entreprise}</b></div>
-              <div><span style={{ color: '#aaa', display: 'block' }}>Tuteur :</span> <b>{viewModalData.tuteur}</b></div>
+              
+              <div>
+                <span style={{ color: '#aaa', display: 'block' }}>Élève :</span> 
+                <b>{viewModalData.apprenant ? `${viewModalData.apprenant.nomApprenant} ${viewModalData.apprenant.prenomApprenant}` : 'Non assigné'}</b>
+              </div>
+              <div>
+                <span style={{ color: '#aaa', display: 'block' }}>Entreprise :</span> 
+                <b>{viewModalData.entreprise?.raisonSociale || 'Non assignée'}</b>
+              </div>
+              <div>
+                <span style={{ color: '#aaa', display: 'block' }}>Tuteur :</span> 
+                <b>{viewModalData.enseignantTuteur ? `${viewModalData.enseignantTuteur.nomEnseignant} ${viewModalData.enseignantTuteur.prenomEnseignant}` : 'Non assigné'}</b>
+              </div>
               <div><span style={{ color: '#aaa', display: 'block' }}>Date de début :</span> <b>{viewModalData.dateDebut || 'Non définie'}</b></div>
               <div><span style={{ color: '#aaa', display: 'block' }}>Durée :</span> <b>{viewModalData.duree || 'Non définie'}</b></div>
-              <div><span style={{ color: '#aaa', display: 'block' }}>Date soutenance :</span> <b>{viewModalData.dateSoutenance || 'À planifier'}</b></div>
+              <div><span style={{ color: '#aaa', display: 'block' }}>Statut :</span> <b>{viewModalData.etat || 'Non défini'}</b></div>
             </div>
 
             {/* SYSTÈME DE GESTION DU RAPPORTÉ ÉCRIT */}
             <div style={{ borderTop: '1px solid #444', paddingTop: '15px' }}>
               <h3 style={{ color: '#fff', fontSize: '15px', margin: '0 0 10px 0' }}>📄 Document du Rapport</h3>
               
+              {/* Simulation basique, à remplacer par le vrai lien vers le fichier stocké */}
               {viewModalData.rapport ? (
                 <div style={{ backgroundColor: '#2ecc7115', border: '1px dashed #2ecc71', padding: '15px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
@@ -307,7 +367,6 @@ const Stages = () => {
                   <span style={{ color: '#aaa', fontSize: '11px' }}>Prêt pour évaluation</span>
                 </div>
               ) : user?.role === 'APPRENANT' ? (
-                // Formulaire d'upload réservé uniquement à l'étudiant s'il n'a rien déposé
                 <form onSubmit={handleUploadRapport}>
                   <div style={{ backgroundColor: '#1e2124', border: '2px dashed #555', padding: '20px', borderRadius: '6px', textAlign: 'center', cursor: 'pointer', position: 'relative' }}>
                     <input 
@@ -341,53 +400,43 @@ const Stages = () => {
       )}
 
       {/* =========================================================
-          MODALE 3 : MODIFIER LE STAGE EN ENTIER (PUT / DELETE)
+          MODALE 3 : MODIFIER LE STAGE (ADMIN)
       ========================================================= */}
       {editModalData && (
         <div style={overlayStyle}>
           <div style={{ ...modalStyle, borderTopColor: '#f39c12' }}>
             <h2 style={{ margin: '0 0 20px 0', color: '#fff' }}>Modifier le stage</h2>
-            <p style={{ color: '#aaa', fontSize: '13px', marginBottom: '20px' }}>Modification du dossier de : <b style={{ color: '#fff' }}>{editModalData.etudiant}</b></p>
+            
             <form onSubmit={handleEditSubmit}>
               <label style={labelStyle}>État actuel du stage</label>
-              <select style={inputStyle} value={editModalData.etat} onChange={(e) => setEditModalData({...editModalData, etat: e.target.value})}>
-                <option value="en_attente">En attente (Non commencé)</option>
-                <option value="en_cours">En cours</option>
-                <option value="valide">Validé (Terminé)</option>
+              <select style={inputStyle} value={editModalData.etat || ''} onChange={(e) => setEditModalData({...editModalData, etat: e.target.value})}>
+                <option value="EN_ATTENTE">En attente (Non commencé)</option>
+                <option value="EN_COURS">En cours</option>
+                <option value="VALIDE">Validé (Terminé)</option>
               </select>
+
               <label style={labelStyle}>Sujet du stage</label>
-              <input type="text" required style={inputStyle} value={editModalData.sujet} onChange={(e) => setEditModalData({...editModalData, sujet: e.target.value})} />
-              <div style={{ display: 'flex', gap: '15px' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Entreprise</label>
-                  <select required style={inputStyle} value={editModalData.entreprise} onChange={(e) => setEditModalData({...editModalData, entreprise: e.target.value})}>
-                    {entreprisesList.map((e, i) => <option key={i} value={e}>{e}</option>)}
-                  </select>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Tuteur Enseignant</label>
-                  <select required style={inputStyle} value={editModalData.tuteur} onChange={(e) => setEditModalData({...editModalData, tuteur: e.target.value})}>
-                    {profsList.map((p, i) => <option key={i} value={p}>{p}</option>)}
-                  </select>
-                </div>
-              </div>
+              <input type="text" required style={inputStyle} value={editModalData.titre || ''} onChange={(e) => setEditModalData({...editModalData, titre: e.target.value})} />
+              
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>Date de début</label>
-                  <input type="date" required style={inputStyle} value={editModalData.dateDebut} onChange={(e) => setEditModalData({...editModalData, dateDebut: e.target.value})} />
+                  <input type="date" required style={inputStyle} value={editModalData.dateDebut || ''} onChange={(e) => setEditModalData({...editModalData, dateDebut: e.target.value})} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>Durée</label>
-                  <input type="text" required style={inputStyle} value={editModalData.duree} onChange={(e) => setEditModalData({...editModalData, duree: e.target.value})} />
+                  <input type="text" required style={inputStyle} value={editModalData.duree || ''} onChange={(e) => setEditModalData({...editModalData, duree: e.target.value})} />
                 </div>
               </div>
-              <label style={labelStyle}>Objectifs</label>
-              <textarea required rows="3" style={{ ...inputStyle, resize: 'none' }} value={editModalData.objectifs} onChange={(e) => setEditModalData({...editModalData, objectifs: e.target.value})}></textarea>
+
+              <label style={labelStyle}>Objectifs / Description</label>
+              <textarea required rows="3" style={{ ...inputStyle, resize: 'none' }} value={editModalData.description || ''} onChange={(e) => setEditModalData({...editModalData, description: e.target.value})}></textarea>
+              
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #444' }}>
-                <button type="button" onClick={() => handleDelete(editModalData.id)} style={{ padding: '10px 15px', backgroundColor: 'transparent', color: '#e74c3c', border: '1px solid #e74c3c', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>Supprimer</button>
+                <button type="button" onClick={() => handleDelete(editModalData.idStage || editModalData.id)} style={{ padding: '10px 15px', backgroundColor: 'transparent', color: '#e74c3c', border: '1px solid #e74c3c', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>Supprimer</button>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button type="button" onClick={() => setEditModalData(null)} style={{ padding: '10px 15px', backgroundColor: '#7f8c8d', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Annuler</button>
-                  <button type="submit" style={{ padding: '10px 15px', backgroundColor: '#f39c12', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Enregistrer les modifications</button>
+                  <button type="submit" style={{ padding: '10px 15px', backgroundColor: '#f39c12', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Enregistrer</button>
                 </div>
               </div>
             </form>

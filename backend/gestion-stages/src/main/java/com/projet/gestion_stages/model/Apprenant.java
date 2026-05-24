@@ -16,6 +16,7 @@ public class Apprenant {
     private String nomApprenant;
     private String prenomApprenant;
     private String numEtudiant;
+    private String statut = "EN_ATTENTE";
 
     // Liaison vers le compte de connexion
     @OneToOne(cascade = CascadeType.ALL)
