@@ -71,35 +71,60 @@ const Stages = () => {
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     try {
-      const newStage = { 
-        sujet: createFormData.sujet,     
-        objectif: createFormData.objectifs, 
+      const stageBody = {
+        sujet: createFormData.sujet,
+        objectif: createFormData.objectifs,
         dateDebut: createFormData.dateDebut,
         duree: createFormData.duree,
-        etat: 'EN_ATTENTE',
-        
-        apprenant: { idApprenant: createFormData.etudiantId },
-        entreprise: { idEntreprise: createFormData.entrepriseId },
-        enseignantTuteur: { idEnseignant: createFormData.tuteurId }
+        etat: 'EN_COURS'
       };
 
-      await stageService.createStage(newStage);
-      fetchData(); // On rafraîchit
+      await stageService.createStage(
+        stageBody, 
+        createFormData.etudiantId, 
+        createFormData.tuteurId, 
+        createFormData.entrepriseId
+      );
+      
+      fetchData();
       setIsCreateOpen(false);
       setCreateFormData({ sujet: '', entrepriseId: '', tuteurId: '', etudiantId: '', dateDebut: '', duree: '', objectifs: '' });
     } catch (err) {
-      alert("Erreur lors de la création du stage. Vérifiez votre Backend.");
+      alert("Erreur lors de la création du stage.");
     }
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
-      await stageService.updateStage(editModalData.idStage || editModalData.id, editModalData);
-      fetchData();
-      setEditModalData(null);
+      const idStage = editModalData.idStage || editModalData.id;
+      
+      // Extraction des IDs nécessaires pour les @RequestParam du backend
+      const idApprenant = editModalData.apprenant?.idApprenant;
+      const idEntreprise = editModalData.entreprise?.idEntreprise;
+      
+      // Récupère soit la nouvelle sélection (tuteurId), soit l'ID actuel du tuteur
+      const idTuteur = editModalData.tuteurId || editModalData.tuteur?.idEnseignant;
+
+      // Construction du corps conforme au modèle Stage.java
+      const stageBody = {
+        idStage: idStage,
+        sujet: editModalData.sujet,
+        dateDebut: editModalData.dateDebut,
+        duree: editModalData.duree,
+        objectif: editModalData.objectif,
+        etat: editModalData.etat,
+        dateSoutenance: editModalData.dateSoutenance
+      };
+
+      // Envoi de la requête avec les paramètres attendus par la méthode de StageController
+      await stageService.updateStage(idStage, stageBody, idApprenant, idTuteur, idEntreprise);
+      
+      fetchData(); // Rafraîchissement global des lignes du tableau
+      setEditModalData(null); // Clôture de la modale active
     } catch (err) {
-      alert("Erreur lors de la modification.");
+      console.error("Erreur de mise à jour du stage :", err);
+      alert("Erreur lors de la modification du stage.");
     }
   };
 
@@ -221,7 +246,7 @@ const Stages = () => {
                 // Résolution dynamique des noms selon ton modèle
                 const nomEntreprise = stage.entreprise?.raisonSociale || "Non assignée";
                 const nomEleve = stage.apprenant ? `${stage.apprenant.nomApprenant} ${stage.apprenant.prenomApprenant}` : "Non assigné";
-                const nomTuteur = stage.enseignantTuteur ? `${stage.enseignantTuteur.nomEnseignant} ${stage.enseignantTuteur.prenomEnseignant}` : "Non assigné";
+                const nomTuteur = stage.tuteur ? `${stage.tuteur.nomEnseignant} ${stage.tuteur.prenomEnseignant}` : "Non assigné";
 
                 return(
                   <tr key={id} style={{ borderBottom: '1px solid #444' }}>
@@ -321,7 +346,7 @@ const Stages = () => {
         </div>
       )}
 
-      {/* =========================================================
+{/* =========================================================
           MODALE 2 : DÉTAILS DU STAGE (VUE COMMUNE)
       ========================================================= */}
       {viewModalData && (
@@ -332,8 +357,9 @@ const Stages = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', color: '#ddd', fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
               <div style={{ gridColumn: 'span 2', paddingBottom: '10px', borderBottom: '1px solid #444' }}>
                 <span style={{ color: '#aaa', fontSize: '12px', display: 'block' }}>Sujet et Description</span>
-                <b style={{ color: '#fff', fontSize: '16px' }}>{viewModalData.titre || viewModalData.sujet}</b>
-                <p style={{ margin: '5px 0 0 0', fontStyle: 'italic', color: '#bbb' }}>"{viewModalData.description || viewModalData.objectifs}"</p>
+                {}
+                <b style={{ color: '#fff', fontSize: '16px' }}>{viewModalData.sujet}</b>
+                <p style={{ margin: '5px 0 0 0', fontStyle: 'italic', color: '#bbb' }}>"{viewModalData.objectif}"</p>
               </div>
               
               <div>
@@ -346,7 +372,7 @@ const Stages = () => {
               </div>
               <div>
                 <span style={{ color: '#aaa', display: 'block' }}>Tuteur :</span> 
-                <b>{viewModalData.enseignantTuteur ? `${viewModalData.enseignantTuteur.nomEnseignant} ${viewModalData.enseignantTuteur.prenomEnseignant}` : 'Non assigné'}</b>
+                <b>{viewModalData.tuteur ? `${viewModalData.tuteur.nomEnseignant} ${viewModalData.tuteur.prenomEnseignant}` : 'Non assigné'}</b>
               </div>
               <div><span style={{ color: '#aaa', display: 'block' }}>Date de début :</span> <b>{viewModalData.dateDebut || 'Non définie'}</b></div>
               <div><span style={{ color: '#aaa', display: 'block' }}>Durée :</span> <b>{viewModalData.duree || 'Non définie'}</b></div>
@@ -357,7 +383,6 @@ const Stages = () => {
             <div style={{ borderTop: '1px solid #444', paddingTop: '15px' }}>
               <h3 style={{ color: '#fff', fontSize: '15px', margin: '0 0 10px 0' }}>📄 Document du Rapport</h3>
               
-              {/* Simulation basique, à remplacer par le vrai lien vers le fichier stocké */}
               {viewModalData.rapport ? (
                 <div style={{ backgroundColor: '#2ecc7115', border: '1px dashed #2ecc71', padding: '15px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
@@ -416,8 +441,25 @@ const Stages = () => {
               </select>
 
               <label style={labelStyle}>Sujet du stage</label>
-              <input type="text" required style={inputStyle} value={editModalData.titre || ''} onChange={(e) => setEditModalData({...editModalData, titre: e.target.value})} />
+              <input type="text" required style={inputStyle} value={editModalData.sujet || ''} onChange={(e) => setEditModalData({...editModalData, sujet: e.target.value})} />
               
+              {/* --- NOUVEAU CHAMP : SÉLECTION DU TUTEUR --- */}
+              <label style={labelStyle}>Tuteur Enseignant référent</label>
+              <select 
+                required 
+                style={inputStyle} 
+                value={editModalData.tuteurId || editModalData.tuteur?.idEnseignant || ''} 
+                onChange={(e) => setEditModalData({...editModalData, tuteurId: e.target.value})}
+              >
+                <option value="">Sélectionner un enseignant...</option>
+                {profsList.map((p) => (
+                  <option key={p.idEnseignant} value={p.idEnseignant}>
+                    {p.nomEnseignant} {p.prenomEnseignant}
+                  </option>
+                ))}
+              </select>
+              {/* ------------------------------------------- */}
+
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>Date de début</label>
@@ -430,7 +472,7 @@ const Stages = () => {
               </div>
 
               <label style={labelStyle}>Objectifs / Description</label>
-              <textarea required rows="3" style={{ ...inputStyle, resize: 'none' }} value={editModalData.description || ''} onChange={(e) => setEditModalData({...editModalData, description: e.target.value})}></textarea>
+              <textarea required rows="3" style={{ ...inputStyle, resize: 'none' }} value={editModalData.objectif || ''} onChange={(e) => setEditModalData({...editModalData, objectif: e.target.value})}></textarea>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #444' }}>
                 <button type="button" onClick={() => handleDelete(editModalData.idStage || editModalData.id)} style={{ padding: '10px 15px', backgroundColor: 'transparent', color: '#e74c3c', border: '1px solid #e74c3c', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>Supprimer</button>

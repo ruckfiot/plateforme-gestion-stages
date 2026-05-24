@@ -17,6 +17,8 @@ public class Enseignant {
     private String prenomEnseignant;
     private String matricule;
     private String specialite;
+    private String matiere;
+    private String statut = "EN_ATTENTE";
 
     // Liaison vers le compte de connexion
     @OneToOne(cascade = CascadeType.ALL)

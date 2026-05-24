@@ -5,13 +5,17 @@ const getAllStages = async () => {
   return response.data;
 };
 
-const createStage = async (stageData) => {
-  const response = await api.post('/stages', stageData);
+const createStage = async (stageData, idApprenant, idTuteur, idEntreprise) => {
+  const response = await api.post('/stages', stageData, {
+    params: { idApprenant, idTuteur, idEntreprise }
+  });
   return response.data;
 };
 
-const updateStage = async (id, stageData) => {
-  const response = await api.put(`/stages/${id}`, stageData);
+const updateStage = async (id, stageData, idApprenant, idTuteur, idEntreprise) => {
+  const response = await api.put(`/stages/${id}`, stageData, {
+    params: { idApprenant, idTuteur, idEntreprise }
+  });
   return response.data;
 };
 
@@ -20,5 +24,11 @@ const deleteStage = async (id) => {
   return response.data;
 };
 
-const stageService = { getAllStages, createStage, updateStage, deleteStage };
+const stageService = {
+  getAllStages,
+  createStage,
+  updateStage,
+  deleteStage
+};
+
 export default stageService;

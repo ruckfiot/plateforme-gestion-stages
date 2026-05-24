@@ -22,4 +22,27 @@ public class EnseignantService {
     public Enseignant createEnseignant(Enseignant enseignant) {
         return enseignantRepository.save(enseignant);
     }
+
+    public java.util.Optional<Enseignant> updateEnseignant(Long id, Enseignant details) {
+        return enseignantRepository.findById(id).map(enseignant -> {
+            enseignant.setNomEnseignant(details.getNomEnseignant());
+            enseignant.setPrenomEnseignant(details.getPrenomEnseignant());
+            enseignant.setMatiere(details.getMatiere());
+            
+            // On vérifie que le statut n'est pas écrasé par du vide
+            if(details.getStatut() != null) {
+                enseignant.setStatut(details.getStatut());
+            }
+            
+            return enseignantRepository.save(enseignant);
+        });
+    }
+
+    public boolean deleteEnseignant(Long id) {
+        if(enseignantRepository.existsById(id)) {
+            enseignantRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
 }
