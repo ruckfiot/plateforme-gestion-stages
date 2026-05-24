@@ -89,11 +89,15 @@ const Entreprises = () => {
     );
   }
 
-  // --- STYLES RÉUTILISABLES ---
+  // --- STYLES ---
   const overlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
   const modalStyle = { backgroundColor: '#2c2f33', padding: '30px', borderRadius: '10px', width: '400px', borderTop: '5px solid #2ecc71', boxShadow: '0 15px 25px rgba(0,0,0,0.5)' };
   const inputStyle = { width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #555', backgroundColor: '#1e2124', color: '#fff', boxSizing: 'border-box', marginBottom: '15px' };
   const labelStyle = { color: '#aaa', fontSize: '13px', display: 'block', marginBottom: '5px' };
+
+  if (loading) {
+    return <div style={{ padding: '40px', color: '#fff' }}>Chargement des entreprises...</div>;
+  }
 
   return (
     <div style={{ padding: '40px', width: '100%', maxWidth: '1100px', boxSizing: 'border-box', margin: '0 auto', fontFamily: 'sans-serif', textAlign: 'left' }}>
@@ -128,49 +132,45 @@ const Entreprises = () => {
 
       {/* TABLEAU */}
       <div style={{ backgroundColor: '#2c2f33', padding: '30px', borderRadius: '10px', boxShadow: '0 8px 15px rgba(0,0,0,0.2)' }}>
-        {loading ? (
-          <p style={{ color: 'white', textAlign: 'center' }}>Chargement des données...</p>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid #444', color: '#aaaaaa' }}>
-                <th style={{ padding: '15px 10px', fontWeight: 'normal' }}>Raison Sociale</th>
-                <th style={{ padding: '15px 10px', fontWeight: 'normal' }}>Adresse</th>
-                <th style={{ padding: '15px 10px', fontWeight: 'normal' }}>Contact</th>
-                <th style={{ padding: '15px 10px', fontWeight: 'normal' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayedEntreprises.length > 0 ? (
-                displayedEntreprises.map((ent) => (
-                  <tr key={ent.idEntreprise} style={{ borderBottom: '1px solid #444' }}>
-                    <td style={{ padding: '15px 10px', color: '#ffffff', fontWeight: 'bold' }}>{ent.raisonSociale}</td>
-                    <td style={{ padding: '15px 10px', color: '#dddddd', fontSize: '14px' }}>{ent.adresse}</td>
-                    <td style={{ padding: '15px 10px', color: '#3498db' }}>{ent.contact}</td>
-                    <td style={{ padding: '15px 10px' }}>
-                      <button 
-                        onClick={() => setEditModalData(ent)}
-                        style={{ marginRight: '10px', padding: '8px 12px', cursor: 'pointer', backgroundColor: '#36393f', color: '#ffffff', border: '1px solid #555', borderRadius: '5px', fontSize: '13px' }}>
-                        Modifier
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(ent.idEntreprise)}
-                        style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#e74c3c', color: '#ffffff', border: 'none', borderRadius: '5px', fontSize: '13px', fontWeight: 'bold' }}>
-                        Supprimer
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="4" style={{ padding: '20px', textAlign: 'center', color: '#aaaaaa' }}>
-                    Aucune entreprise ne correspond à votre recherche.
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <thead>
+            <tr style={{ borderBottom: '2px solid #444', color: '#aaaaaa' }}>
+              <th style={{ padding: '15px 10px', fontWeight: 'normal' }}>Raison Sociale</th>
+              <th style={{ padding: '15px 10px', fontWeight: 'normal' }}>Adresse</th>
+              <th style={{ padding: '15px 10px', fontWeight: 'normal' }}>Contact</th>
+              <th style={{ padding: '15px 10px', fontWeight: 'normal' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayedEntreprises.length > 0 ? (
+              displayedEntreprises.map((ent) => (
+                <tr key={ent.idEntreprise} style={{ borderBottom: '1px solid #444' }}>
+                  <td style={{ padding: '15px 10px', color: '#ffffff', fontWeight: 'bold' }}>{ent.raisonSociale}</td>
+                  <td style={{ padding: '15px 10px', color: '#dddddd', fontSize: '14px' }}>{ent.adresse}</td>
+                  <td style={{ padding: '15px 10px', color: '#3498db' }}>{ent.contact}</td>
+                  <td style={{ padding: '15px 10px' }}>
+                    <button 
+                      onClick={() => setEditModalData(ent)}
+                      style={{ marginRight: '10px', padding: '8px 12px', cursor: 'pointer', backgroundColor: '#36393f', color: '#ffffff', border: '1px solid #555', borderRadius: '5px', fontSize: '13px' }}>
+                      Modifier
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(ent.idEntreprise)}
+                      style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#e74c3c', color: '#ffffff', border: 'none', borderRadius: '5px', fontSize: '13px', fontWeight: 'bold' }}>
+                      Supprimer
+                    </button>
                   </td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        )}
+              ))
+            ) : (
+              <tr>
+                <td colSpan="4" style={{ padding: '20px', textAlign: 'center', color: '#aaaaaa' }}>
+                  Aucune entreprise ne correspond à votre recherche.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* MODALE 1 : CRÉATION */}
