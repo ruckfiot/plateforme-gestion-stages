@@ -1,4 +1,4 @@
-import api from './api'; 
+import api from './api';
 
 const getAllStages = async () => {
   const response = await api.get('/stages');
@@ -10,9 +10,15 @@ const createStage = async (stageData) => {
   return response.data;
 };
 
-const stageService = {
-  getAllStages,
-  createStage
+const updateStage = async (id, stageData) => {
+  const response = await api.put(`/stages/${id}`, stageData);
+  return response.data;
 };
 
+const deleteStage = async (id) => {
+  const response = await api.delete(`/stages/${id}`);
+  return response.data;
+};
+
+const stageService = { getAllStages, createStage, updateStage, deleteStage };
 export default stageService;

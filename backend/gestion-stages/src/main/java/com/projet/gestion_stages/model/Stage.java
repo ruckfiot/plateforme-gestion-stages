@@ -11,6 +11,7 @@ public class Stage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idStage;
     
+    private String sujet;
     private LocalDate dateDebut;
     private String duree;
     private String objectif;

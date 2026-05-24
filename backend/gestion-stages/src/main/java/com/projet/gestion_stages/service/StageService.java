@@ -89,12 +89,17 @@ public class StageService {
         if (stage.getEtat() == null || stage.getEtat().isEmpty()) {
             stage.setEtat("EN_COURS");
         }
+        // Le "sujet" et "objectif" sont automatiquement sauvegardés ici par Spring Data JPA
         return stageRepository.save(stage);
     }
     
     // UPDATE stage complet (Admin)
     public Optional<Stage> updateStage(Long id, Stage details, Long idApprenant, Long idTuteur, Long idEntreprise) {
         return stageRepository.findById(id).map(stage -> {
+            // --- NOUVELLE LIGNE AJOUTÉE ICI ---
+            stage.setSujet(details.getSujet()); 
+            // ----------------------------------
+            
             stage.setDateDebut(details.getDateDebut());
             stage.setDuree(details.getDuree());
             stage.setObjectif(details.getObjectif());

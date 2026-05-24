@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
+import utilisateurService from '../services/utilisateurService';
 import { useNavigate } from 'react-router-dom';
 
 const Utilisateurs = () => {
@@ -7,67 +8,96 @@ const Utilisateurs = () => {
   const user = authService.getCurrentUser();
   const [tab, setTab] = useState('eleves');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  // --- FAUSSES DONNÉES ---
-  const [eleves, setEleves] = useState([
-    { id: 1, nom: "Dupont", prenom: "Jean", promo: "M1 Info", statut: "VALIDE" },
-    { id: 2, nom: "Martin", prenom: "Sophie", promo: "L3 Cyber", statut: "VALIDE" },
-    { id: 3, nom: "Gerard", prenom: "Lucas", promo: "M1 Info", statut: "EN_ATTENTE" },
-    { id: 4, nom: "Petit", prenom: "Amélie", promo: "L3 Cyber", statut: "EN_ATTENTE" },
-  ]);
+  // --- ÉTATS DYNAMIQUES (VRAIE BDD) ---
+  const [eleves, setEleves] = useState([]);
+  const [profs, setProfs] = useState([]);
 
-  const [profs, setProfs] = useState([
-    { id: 101, nom: "Lemoine", prenom: "Pierre", matiere: "Java Spring", statut: "VALIDE" },
-    { id: 102, nom: "Guerin", prenom: "Marie", matiere: "Bases de données", statut: "VALIDE" },
-  ]);
+  // --- CHARGEMENT DES DONNÉES ---
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const apprenantsData = await utilisateurService.getApprenants();
+      const enseignantsData = await utilisateurService.getEnseignants();
+      setEleves(apprenantsData);
+      setProfs(enseignantsData);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des utilisateurs", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   // --- ÉTAT MODALE ---
-  const [editModalData, setEditModalData] = useState(null); // Utilisateur en cours d'édition
+  const [editModalData, setEditModalData] = useState(null);
 
   const handleLogout = () => { authService.logout(); navigate('/'); };
 
   // --- ACTIONS DE VALIDATION RAPIDE ---
-  const validerCompte = (id) => {
-    // TODO: Axios PUT -> /api/utilisateurs/{id}/valider
-    if (tab === 'eleves') {
-      setEleves(eleves.map(e => e.id === id ? { ...e, statut: 'VALIDE' } : e));
-    } else {
-      setProfs(profs.map(p => p.id === id ? { ...p, statut: 'VALIDE' } : p));
+  const validerCompte = async (u) => {
+    try {
+      const updatedUser = { ...u, statut: 'VALIDE' }; // Assure-toi que ton modèle Java a bien un attribut "statut" ou "etat"
+      if (tab === 'eleves') {
+        await utilisateurService.updateApprenant(u.idUtilisateur || u.id, updatedUser);
+      } else {
+        await utilisateurService.updateEnseignant(u.idUtilisateur || u.id, updatedUser);
+      }
+      fetchData(); // On rafraîchit la liste
+    } catch (err) {
+      alert("Erreur lors de la validation. (Vérifiez que la route PUT existe sur le backend)");
     }
   };
 
-  const refuserCompte = (id) => {
-    // TODO: Axios DELETE -> /api/utilisateurs/{id}
+  const refuserCompte = async (id) => {
     if (window.confirm("Refuser et supprimer cette demande d'inscription ?")) {
-      if (tab === 'eleves') {
-        setEleves(eleves.filter(e => e.id !== id));
-      } else {
-        setProfs(profs.filter(p => p.id !== id));
+      try {
+        if (tab === 'eleves') {
+          await utilisateurService.deleteApprenant(id);
+        } else {
+          await utilisateurService.deleteEnseignant(id);
+        }
+        fetchData();
+      } catch (err) {
+        alert("Erreur lors de la suppression.");
       }
     }
   };
 
   // --- ACTIONS DE MODIFICATION (MODALE) ---
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Axios PUT -> /api/utilisateurs/{editModalData.id}
-    if (tab === 'eleves') {
-      setEleves(eleves.map(el => el.id === editModalData.id ? editModalData : el));
-    } else {
-      setProfs(profs.map(pr => pr.id === editModalData.id ? editModalData : pr));
+    try {
+      const id = editModalData.idUtilisateur || editModalData.id;
+      if (tab === 'eleves') {
+        await utilisateurService.updateApprenant(id, editModalData);
+      } else {
+        await utilisateurService.updateEnseignant(id, editModalData);
+      }
+      fetchData();
+      setEditModalData(null);
+    } catch (err) {
+      alert("Erreur lors de la modification.");
     }
-    setEditModalData(null);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer définitivement ce compte ?")) {
-      // TODO: Axios DELETE -> /api/utilisateurs/{id}
-      if (tab === 'eleves') {
-        setEleves(eleves.filter(e => e.id !== id));
-      } else {
-        setProfs(profs.filter(p => p.id !== id));
+      try {
+        if (tab === 'eleves') {
+          await utilisateurService.deleteApprenant(id);
+        } else {
+          await utilisateurService.deleteEnseignant(id);
+        }
+        fetchData();
+        setEditModalData(null);
+      } catch (err) {
+        alert("Erreur lors de la suppression.");
       }
-      setEditModalData(null);
     }
   };
 
@@ -78,8 +108,8 @@ const Utilisateurs = () => {
   if (searchQuery) {
     const lowerCaseQuery = searchQuery.toLowerCase();
     filteredList = listToFilter.filter(u => 
-      u.nom.toLowerCase().includes(lowerCaseQuery) || 
-      u.prenom.toLowerCase().includes(lowerCaseQuery) ||
+      (u.nomApprenant && u.nomApprenant.toLowerCase().includes(lowerCaseQuery)) || 
+      (u.prenomApprenant && u.prenomApprenant.toLowerCase().includes(lowerCaseQuery)) ||
       (u.promo && u.promo.toLowerCase().includes(lowerCaseQuery)) ||
       (u.matiere && u.matiere.toLowerCase().includes(lowerCaseQuery))
     );
@@ -90,6 +120,8 @@ const Utilisateurs = () => {
   const modalStyle = { backgroundColor: '#2c2f33', padding: '30px', borderRadius: '10px', width: '400px', borderTop: '5px solid #3498db', boxShadow: '0 15px 25px rgba(0,0,0,0.5)' };
   const inputStyle = { width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #555', backgroundColor: '#1e2124', color: '#fff', boxSizing: 'border-box', marginBottom: '15px' };
   const labelStyle = { color: '#aaa', fontSize: '13px', display: 'block', marginBottom: '5px' };
+
+  if (loading) return <div style={{ padding: '40px', color: '#fff', textAlign: 'center' }}>Chargement des utilisateurs...</div>;
 
   return (
     <div style={{ padding: '40px', width: '100%', maxWidth: '1100px', boxSizing: 'border-box', margin: '0 auto', fontFamily: 'sans-serif', textAlign: 'left' }}>
@@ -134,34 +166,45 @@ const Utilisateurs = () => {
           </thead>
           <tbody>
             {filteredList.length > 0 ? (
-              filteredList.map((u) => (
-                <tr key={u.id} style={{ borderBottom: '1px solid #444' }}>
-                  <td style={{ padding: '15px 10px', color: '#ffffff' }}><b>{u.nom}</b> {u.prenom}</td>
-                  <td style={{ padding: '15px 10px', color: '#dddddd' }}>{u.promo || u.matiere}</td>
-                  <td style={{ padding: '15px 10px' }}>
-                    <span style={{ 
-                      padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold',
-                      backgroundColor: u.statut === 'VALIDE' ? '#2ecc7120' : '#e67e2220',
-                      color: u.statut === 'VALIDE' ? '#2ecc71' : '#e67e22',
-                      border: `1px solid ${u.statut === 'VALIDE' ? '#2ecc71' : '#e67e22'}`
-                    }}>
-                      {u.statut}
-                    </span>
-                  </td>
-                  <td style={{ padding: '15px 10px' }}>
-                    {u.statut === 'EN_ATTENTE' ? (
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={() => validerCompte(u.id)} style={{ padding: '6px 10px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Valider</button>
-                        <button onClick={() => refuserCompte(u.id)} style={{ padding: '6px 10px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Refuser</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setEditModalData(u)} style={{ padding: '6px 10px', backgroundColor: '#36393f', color: '#ffffff', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>
-                        Gérer
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
+              filteredList.map((u) => {
+                // 1. On attrape le bon ID selon le type d'utilisateur (Élève ou Prof)
+                const currentId = u.idApprenant || u.idEnseignant || u.id; 
+                
+                // 2. On attrape les bons noms selon le modèle Java
+                const nomAffiche = u.nomApprenant || u.nomEnseignant || u.nom || "Inconnu";
+                const prenomAffiche = u.prenomApprenant || u.prenomEnseignant || u.prenom || "";
+                
+                const currentStatut = u.statut || 'EN_ATTENTE';
+
+                return (
+                  <tr key={currentId} style={{ borderBottom: '1px solid #444' }}>
+                    <td style={{ padding: '15px 10px', color: '#ffffff' }}><b>{nomAffiche}</b> {prenomAffiche}</td>
+                    <td style={{ padding: '15px 10px', color: '#dddddd' }}>{u.promo || u.matiere || '-'}</td>
+                    <td style={{ padding: '15px 10px' }}>
+                      <span style={{ 
+                        padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold',
+                        backgroundColor: currentStatut === 'VALIDE' ? '#2ecc7120' : '#e67e2220',
+                        color: currentStatut === 'VALIDE' ? '#2ecc71' : '#e67e22',
+                        border: `1px solid ${currentStatut === 'VALIDE' ? '#2ecc71' : '#e67e22'}`
+                      }}>
+                        {currentStatut}
+                      </span>
+                    </td>
+                    <td style={{ padding: '15px 10px' }}>
+                      {currentStatut === 'EN_ATTENTE' ? (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button onClick={() => validerCompte(u)} style={{ padding: '6px 10px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Valider</button>
+                          <button onClick={() => refuserCompte(currentId)} style={{ padding: '6px 10px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Refuser</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setEditModalData(u)} style={{ padding: '6px 10px', backgroundColor: '#36393f', color: '#ffffff', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>
+                          Gérer
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan="4" style={{ padding: '20px', textAlign: 'center', color: '#aaaaaa' }}>Aucun compte ne correspond à votre recherche.</td>
@@ -183,11 +226,11 @@ const Utilisateurs = () => {
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>Prénom</label>
-                  <input type="text" required style={inputStyle} value={editModalData.prenom} onChange={(e) => setEditModalData({...editModalData, prenom: e.target.value})} />
+                  <input type="text" required style={inputStyle} value={editModalData.prenom || ''} onChange={(e) => setEditModalData({...editModalData, prenom: e.target.value})} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>Nom</label>
-                  <input type="text" required style={inputStyle} value={editModalData.nom} onChange={(e) => setEditModalData({...editModalData, nom: e.target.value})} />
+                  <input type="text" required style={inputStyle} value={editModalData.nom || ''} onChange={(e) => setEditModalData({...editModalData, nom: e.target.value})} />
                 </div>
               </div>
 
@@ -195,17 +238,17 @@ const Utilisateurs = () => {
               {tab === 'eleves' ? (
                 <>
                   <label style={labelStyle}>Promotion / Filière</label>
-                  <input type="text" required style={inputStyle} value={editModalData.promo} onChange={(e) => setEditModalData({...editModalData, promo: e.target.value})} />
+                  <input type="text" style={inputStyle} value={editModalData.promo || ''} onChange={(e) => setEditModalData({...editModalData, promo: e.target.value})} />
                 </>
               ) : (
                 <>
                   <label style={labelStyle}>Matière enseignée</label>
-                  <input type="text" required style={inputStyle} value={editModalData.matiere} onChange={(e) => setEditModalData({...editModalData, matiere: e.target.value})} />
+                  <input type="text" style={inputStyle} value={editModalData.matiere || ''} onChange={(e) => setEditModalData({...editModalData, matiere: e.target.value})} />
                 </>
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #444' }}>
-                <button type="button" onClick={() => handleDelete(editModalData.id)} style={{ padding: '10px 15px', backgroundColor: 'transparent', color: '#e74c3c', border: '1px solid #e74c3c', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
+                <button type="button" onClick={() => handleDelete(editModalData.idUtilisateur || editModalData.id)} style={{ padding: '10px 15px', backgroundColor: 'transparent', color: '#e74c3c', border: '1px solid #e74c3c', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
                   Supprimer le compte
                 </button>
                 <div style={{ display: 'flex', gap: '10px' }}>
