@@ -14,6 +14,32 @@ const Utilisateurs = () => {
   const [eleves, setEleves] = useState([]);
   const [profs, setProfs] = useState([]);
 
+  // --- ÉTATS DES MODALES ---
+  const [editModalData, setEditModalData] = useState(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  // --- LISTE DES PROMOTIONS ---
+  const listePromos = ["E1", "E2", "E3a", "E3e", "E4a", "E4e", "E5a", "E5e"];
+
+  const listeMatieres = [
+    "Anglais", 
+    "Mathématiques", 
+    "Développement web", 
+    "Réseau et télécommunications", 
+    "Cybersécurité", 
+    "IA", 
+    "Électronique"
+  ];
+
+  // --- FORMULAIRE DE CRÉATION ---
+  const [createFormData, setCreateFormData] = useState({
+    role: 'APPRENANT', 
+    prenom: '',
+    nom: '',
+    email: '',
+    motDePasse: ''
+  });
+
   // --- CHARGEMENT DES DONNÉES ---
   const fetchData = async () => {
     setLoading(true);
@@ -33,50 +59,77 @@ const Utilisateurs = () => {
     fetchData();
   }, []);
 
-  // --- ÉTAT MODALE ---
-  const [editModalData, setEditModalData] = useState(null);
+  const handleLogout = () => { 
+    authService.logout(); 
+    navigate('/'); 
+  };
 
-  const handleLogout = () => { authService.logout(); navigate('/'); };
+  // --- ACTION DE CRÉATION DE COMPTE ---
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      // On prépare l'objet pour l'API /register
+      const newUser = {
+        nom: createFormData.nom,
+        prenom: createFormData.prenom,
+        email: createFormData.email,
+        motDePasse: createFormData.motDePasse, // Aligné avec ton authService
+        role: createFormData.role
+      };
+
+      await authService.register(newUser);
+      
+      fetchData(); // Rafraîchit le tableau
+      setIsCreateOpen(false); // Ferme la modale
+      setCreateFormData({ role: 'ROLE_APPRENANT', prenom: '', nom: '', email: '', motDePasse: '' });
+      
+    } catch (err) {
+      console.error("Erreur d'inscription :", err.response?.data || err);
+      alert("Erreur lors de la création du compte. Vérifiez les rôles ou l'email.");
+    }
+  };
 
   // --- ACTIONS DE VALIDATION RAPIDE ---
   const validerCompte = async (u) => {
     try {
-      const updatedUser = { ...u, statut: 'VALIDE' }; // Assure-toi que ton modèle Java a bien un attribut "statut" ou "etat"
+      const currentId = u.idApprenant || u.idEnseignant;
+      const updatedUser = { ...u, statut: 'VALIDE' };
       if (tab === 'eleves') {
-        await utilisateurService.updateApprenant(u.idUtilisateur || u.id, updatedUser);
+        await utilisateurService.updateApprenant(currentId, updatedUser);
       } else {
-        await utilisateurService.updateEnseignant(u.idUtilisateur || u.id, updatedUser);
+        await utilisateurService.updateEnseignant(currentId, updatedUser);
       }
-      fetchData(); // On rafraîchit la liste
+      fetchData(); 
     } catch (err) {
-      alert("Erreur lors de la validation. (Vérifiez que la route PUT existe sur le backend)");
+      alert("Erreur lors de la validation.");
     }
   };
 
-  const refuserCompte = async (id) => {
+  const refuserCompte = async (u) => {
     if (window.confirm("Refuser et supprimer cette demande d'inscription ?")) {
       try {
+        const currentId = u.idApprenant || u.idEnseignant;
         if (tab === 'eleves') {
-          await utilisateurService.deleteApprenant(id);
+          await utilisateurService.deleteApprenant(currentId);
         } else {
-          await utilisateurService.deleteEnseignant(id);
+          await utilisateurService.deleteEnseignant(currentId);
         }
         fetchData();
       } catch (err) {
-        alert("Erreur lors de la suppression.");
+        alert("Erreur lors de la suppression. Ce compte est probablement lié à un stage.");
       }
     }
   };
 
-  // --- ACTIONS DE MODIFICATION (MODALE) ---
+  // --- ACTIONS DE MODIFICATION (MODALE GÉRER) ---
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
-      const id = editModalData.idUtilisateur || editModalData.id;
+      const currentId = editModalData.idApprenant || editModalData.idEnseignant;
       if (tab === 'eleves') {
-        await utilisateurService.updateApprenant(id, editModalData);
+        await utilisateurService.updateApprenant(currentId, editModalData);
       } else {
-        await utilisateurService.updateEnseignant(id, editModalData);
+        await utilisateurService.updateEnseignant(currentId, editModalData);
       }
       fetchData();
       setEditModalData(null);
@@ -110,6 +163,8 @@ const Utilisateurs = () => {
     filteredList = listToFilter.filter(u => 
       (u.nomApprenant && u.nomApprenant.toLowerCase().includes(lowerCaseQuery)) || 
       (u.prenomApprenant && u.prenomApprenant.toLowerCase().includes(lowerCaseQuery)) ||
+      (u.nomEnseignant && u.nomEnseignant.toLowerCase().includes(lowerCaseQuery)) ||
+      (u.prenomEnseignant && u.prenomEnseignant.toLowerCase().includes(lowerCaseQuery)) ||
       (u.promo && u.promo.toLowerCase().includes(lowerCaseQuery)) ||
       (u.matiere && u.matiere.toLowerCase().includes(lowerCaseQuery))
     );
@@ -138,19 +193,33 @@ const Utilisateurs = () => {
         </div>
       </div>
 
-      {/* BARRE D'ACTIONS : ONGLETS ET RECHERCHE */}
+      {/* BARRE D'ACTIONS RÉORGANISÉE : Onglets | Recherche | Création */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={() => { setTab('eleves'); setSearchQuery(''); }} style={{ padding: '10px 25px', backgroundColor: tab === 'eleves' ? '#3498db' : '#2c2f33', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Élèves</button>
-          <button onClick={() => { setTab('profs'); setSearchQuery(''); }} style={{ padding: '10px 25px', backgroundColor: tab === 'profs' ? '#3498db' : '#2c2f33', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Profs</button>
+        
+        {/* GAUCHE : Onglets */}
+        <div style={{ display: 'flex', gap: '10px', flex: 1 }}>
+          <button onClick={() => { setTab('eleves'); setSearchQuery(''); }} style={{ padding: '10px 25px', backgroundColor: tab === 'eleves' ? '#3498db' : '#2c2f33', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Élèves</button>
+          <button onClick={() => { setTab('profs'); setSearchQuery(''); }} style={{ padding: '10px 25px', backgroundColor: tab === 'profs' ? '#3498db' : '#2c2f33', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Profs</button>
         </div>
-        <input 
-          type="text" 
-          placeholder={`Rechercher un ${tab === 'eleves' ? 'élève' : 'professeur'}...`}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ padding: '10px 15px', borderRadius: '6px', border: '1px solid #444', backgroundColor: '#2c2f33', color: 'white', width: '300px' }} 
-        />
+        
+        {/* MILIEU : Barre de recherche */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <input 
+            type="text" 
+            placeholder={`Rechercher un ${tab === 'eleves' ? 'élève' : 'professeur'}...`}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ padding: '10px 15px', borderRadius: '6px', border: '1px solid #444', backgroundColor: '#2c2f33', color: 'white', width: '100%', maxWidth: '350px' }} 
+          />
+        </div>
+
+        {/* DROITE : Bouton Créer */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          <button onClick={() => setIsCreateOpen(true)} style={{ padding: '10px 20px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
+            + Créer un compte
+          </button>
+        </div>
+
       </div>
 
       {/* TABLEAU */}
@@ -167,13 +236,9 @@ const Utilisateurs = () => {
           <tbody>
             {filteredList.length > 0 ? (
               filteredList.map((u) => {
-                // 1. On attrape le bon ID selon le type d'utilisateur (Élève ou Prof)
                 const currentId = u.idApprenant || u.idEnseignant || u.id; 
-                
-                // 2. On attrape les bons noms selon le modèle Java
                 const nomAffiche = u.nomApprenant || u.nomEnseignant || u.nom || "Inconnu";
                 const prenomAffiche = u.prenomApprenant || u.prenomEnseignant || u.prenom || "";
-                
                 const currentStatut = u.statut || 'EN_ATTENTE';
 
                 return (
@@ -194,7 +259,7 @@ const Utilisateurs = () => {
                       {currentStatut === 'EN_ATTENTE' ? (
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button onClick={() => validerCompte(u)} style={{ padding: '6px 10px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Valider</button>
-                          <button onClick={() => refuserCompte(currentId)} style={{ padding: '6px 10px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Refuser</button>
+                          <button onClick={() => refuserCompte(u)} style={{ padding: '6px 10px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Refuser</button>
                         </div>
                       ) : (
                         <button onClick={() => setEditModalData(u)} style={{ padding: '6px 10px', backgroundColor: '#36393f', color: '#ffffff', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>
@@ -215,7 +280,59 @@ const Utilisateurs = () => {
       </div>
 
       {/* =========================================================
-          MODALE : GÉRER UN COMPTE (MODIFIER / SUPPRIMER)
+          MODALE 1 : CRÉER UN NOUVEAU COMPTE
+      ========================================================= */}
+      {isCreateOpen && (
+        <div style={overlayStyle}>
+          <div style={{ ...modalStyle, borderTopColor: '#2ecc71' }}>
+            <h2 style={{ margin: '0 0 20px 0', color: '#fff' }}>Créer un Utilisateur</h2>
+            <form onSubmit={handleCreateSubmit}>
+              
+              <label style={labelStyle}>Type de compte</label>
+              <label style={labelStyle}>Type de compte</label>
+              <select 
+                required 
+                style={inputStyle} 
+                value={createFormData.role} 
+                onChange={(e) => setCreateFormData({...createFormData, role: e.target.value})}
+              >
+                <option value="APPRENANT">Élève</option>
+                <option value="ENSEIGNANT">Professeur</option>
+              </select>
+
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Prénom</label>
+                  <input type="text" required style={inputStyle} value={createFormData.prenom} onChange={(e) => setCreateFormData({...createFormData, prenom: e.target.value})} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Nom</label>
+                  <input type="text" required style={inputStyle} value={createFormData.nom} onChange={(e) => setCreateFormData({...createFormData, nom: e.target.value})} />
+                </div>
+              </div>
+
+              <label style={labelStyle}>Adresse Email</label>
+              <input type="email" required placeholder="email@ecole.fr" style={inputStyle} value={createFormData.email} onChange={(e) => setCreateFormData({...createFormData, email: e.target.value})} />
+
+              <label style={labelStyle}>Mot de passe temporaire</label>
+              <input type="password" required placeholder="••••••••" style={inputStyle} value={createFormData.motDePasse} onChange={(e) => setCreateFormData({...createFormData, motDePasse: e.target.value})} />
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #444' }}>
+                <button type="button" onClick={() => setIsCreateOpen(false)} style={{ padding: '10px 15px', backgroundColor: '#7f8c8d', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  Annuler
+                </button>
+                <button type="submit" style={{ padding: '10px 15px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  Créer le compte
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          MODALE 2 : GÉRER UN COMPTE EXISTANT (MODIFIER / SUPPRIMER)
       ========================================================= */}
       {editModalData && (
         <div style={overlayStyle}>
@@ -252,21 +369,35 @@ const Utilisateurs = () => {
                 </div>
               </div>
 
-              {/* Champ dynamique selon si c'est un élève ou un prof */}
               {tab === 'eleves' ? (
                 <>
+                  {/* ... (le menu déroulant des promos qu'on a fait avant) ... */}
                   <label style={labelStyle}>Promotion / Filière</label>
-                  <input type="text" style={inputStyle} value={editModalData.promo || ''} onChange={(e) => setEditModalData({...editModalData, promo: e.target.value})} />
+                  <select style={inputStyle} value={editModalData.promo || ''} onChange={(e) => setEditModalData({...editModalData, promo: e.target.value})}>
+                    <option value="">Sélectionner une promo...</option>
+                    {listePromos.map((promo, index) => (
+                      <option key={index} value={promo}>{promo}</option>
+                    ))}
+                  </select>
                 </>
               ) : (
                 <>
                   <label style={labelStyle}>Matière enseignée</label>
-                  <input type="text" style={inputStyle} value={editModalData.matiere || ''} onChange={(e) => setEditModalData({...editModalData, matiere: e.target.value})} />
+                  <select 
+                    style={inputStyle} 
+                    value={editModalData.matiere || ''} 
+                    onChange={(e) => setEditModalData({...editModalData, matiere: e.target.value})}
+                  >
+                    <option value="">Sélectionner une matière...</option>
+                    {listeMatieres.map((matiere, index) => (
+                      <option key={index} value={matiere}>{matiere}</option>
+                    ))}
+                  </select>
                 </>
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #444' }}>
-                <button type="button" onClick={() => handleDelete(editModalData.idUtilisateur || editModalData.id)} style={{ padding: '10px 15px', backgroundColor: 'transparent', color: '#e74c3c', border: '1px solid #e74c3c', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
+                <button type="button" onClick={() => handleDelete(editModalData.idApprenant || editModalData.idEnseignant)} style={{ padding: '10px 15px', backgroundColor: 'transparent', color: '#e74c3c', border: '1px solid #e74c3c', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
                   Supprimer le compte
                 </button>
                 <div style={{ display: 'flex', gap: '10px' }}>

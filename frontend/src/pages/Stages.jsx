@@ -152,7 +152,6 @@ const Stages = () => {
   let displayedStages = stages;
   let titrePage = "Gestion des Stages";
 
-  // ⚠️ Filtrage côté Front : Il faudra l'adapter avec les bons noms d'attributs (ex: stage.enseignantTuteur.idEnseignant)
   if (user?.role === 'ENSEIGNANT') {
     titrePage = "Mes Stages Supervisés";
     // Exemple : displayedStages = stages.filter(stage => stage.enseignantTuteur?.email === user.email);
@@ -162,12 +161,28 @@ const Stages = () => {
   }
 
   // --- LOGIQUE DE RECHERCHE ---
+// --- LOGIQUE DE RECHERCHE ---
   if (searchQuery) {
     const lowerCaseQuery = searchQuery.toLowerCase();
-    displayedStages = displayedStages.filter(stage => 
-      (stage.titre && stage.titre.toLowerCase().includes(lowerCaseQuery)) ||
-      (stage.entreprise?.raisonSociale && stage.entreprise.raisonSociale.toLowerCase().includes(lowerCaseQuery))
-    );
+    displayedStages = displayedStages.filter(stage => {
+      
+      // 1. Recherche dans le Sujet
+      const matchSujet = (stage.titre || stage.sujet || '').toLowerCase().includes(lowerCaseQuery);
+      
+      // 2. Recherche dans l'Entreprise
+      const matchEntreprise = (stage.entreprise?.raisonSociale || '').toLowerCase().includes(lowerCaseQuery);
+      
+      // 3. Recherche dans l'Élève (Nom + Prénom combinés)
+      const eleveFullName = stage.apprenant ? `${stage.apprenant.nomApprenant} ${stage.apprenant.prenomApprenant}`.toLowerCase() : '';
+      const matchEleve = eleveFullName.includes(lowerCaseQuery);
+      
+      // 4. Recherche dans le Tuteur (Nom + Prénom combinés)
+      const tuteurFullName = stage.tuteur ? `${stage.tuteur.nomEnseignant} ${stage.tuteur.prenomEnseignant}`.toLowerCase() : '';
+      const matchTuteur = tuteurFullName.includes(lowerCaseQuery);
+
+      // Si le texte tapé correspond à au moins UNE des catégories, on affiche la ligne !
+      return matchSujet || matchEntreprise || matchEleve || matchTuteur;
+    });
   }
 
   const renderStatut = (stage) => {

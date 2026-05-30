@@ -27,6 +27,17 @@ const login = async (email, motDePasse) => {
   return response.data;
 };
 
+// --- LA FAMEUSE FONCTION MANQUANTE ---
+const register = async (userData) => {
+  const response = await axios.post(`${API_URL}/register`, userData, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+  return response.data;
+};
+// -------------------------------------
+
 const logout = () => {
   // Pour se déconnecter, on vide la mémoire du navigateur
   localStorage.removeItem('user');
@@ -40,5 +51,6 @@ const getCurrentUser = () => {
 export default {
   login,
   logout,
-  getCurrentUser
+  getCurrentUser,
+  register
 };

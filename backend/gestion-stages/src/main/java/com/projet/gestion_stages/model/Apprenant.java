@@ -16,6 +16,7 @@ public class Apprenant {
     private String nomApprenant;
     private String prenomApprenant;
     private String numEtudiant;
+    private String promo;
     private String statut = "EN_ATTENTE";
 
     // Liaison vers le compte de connexion
@@ -35,4 +36,12 @@ public class Apprenant {
     @OneToMany(mappedBy = "apprenant")
     @JsonIgnore
     private List<Stage> stages;
+
+    public String getPromo() {
+    return this.promo;
+}
+
+    public void setPromo(String promo) {
+        this.promo = promo;
+}
 }

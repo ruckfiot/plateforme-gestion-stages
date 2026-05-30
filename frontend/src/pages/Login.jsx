@@ -17,7 +17,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   // --- LOGIQUE DE CONNEXION AVEC SIMULATION DES ÉTATS DE VALIDATION ---
-  const handleLogin = (e) => {
+const handleLogin = async (e) => { // <-- 1. Ne pas oublier le mot "async" ici !
     e.preventDefault();
     setError('');
 
@@ -26,21 +26,31 @@ const Login = () => {
       return;
     }
 
-    // 1. SCÉNARIO : Compte en cours de validation
+    // 1. SCÉNARIO : Compte en cours de validation (Mock pour tester l'interface)
     if (email === 'attente@test.com') {
       setView('pending-login');
       return;
     }
 
-    // 2. SCÉNARIO : Compte refusé par l'admin
+    // 2. SCÉNARIO : Compte refusé par l'admin (Mock pour tester l'interface)
     if (email === 'refuse@test.com') {
       setError('Impossible de créer ce compte. Votre demande d\'inscription a été refusée par l\'administrateur.');
       return;
     }
 
-    // 3. SCÉNARIO : Connexion normale (Admin, Enseignant, Apprenant validé)
-    authService.login(email, password);
-    navigate('/accueil');
+    // 3. SCÉNARIO : Connexion normale (Vrai Backend)
+    try {
+      // 2. On ATTEND (await) la réponse du serveur avant de faire quoi que ce soit d'autre
+      await authService.login(email, password);
+      
+      // 3. Si le serveur répond "OK", on navigue vers l'accueil !
+      navigate('/accueil');
+      
+    } catch (err) {
+      // 4. Si le serveur refuse (mauvais mot de passe), on l'affiche proprement
+      console.error(err);
+      setError('Identifiants incorrects ou compte non validé.');
+    }
   };
 
   // --- LOGIQUE D'INSCRIPTION (ENVOI REQUÊTE) ---
