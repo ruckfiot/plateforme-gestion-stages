@@ -174,14 +174,14 @@ const Stages = () => {
     const etatActuel = stage.etat || 'EN_ATTENTE';
 
     if (user?.role === 'ENSEIGNANT') {
-       return <span style={{ backgroundColor: '#e67e22', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>À ÉVALUER</span>;
+       return <span style={{ backgroundColor: '#e67e22', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>À ÉVALUER</span>;
     } else {
       let bgColor = '#7f8c8d';
       if (etatActuel.toLowerCase() === 'valide' || etatActuel.toLowerCase() === 'validé') bgColor = '#27ae60';
       if (etatActuel.toLowerCase() === 'en_cours') bgColor = '#2980b9';
       if (etatActuel.toLowerCase() === 'en_attente') bgColor = '#d35400';
       
-      return <span style={{ backgroundColor: bgColor, color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>
+      return <span style={{ backgroundColor: bgColor, color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
         {etatActuel.replace('_', ' ').toUpperCase()}
       </span>;
     }

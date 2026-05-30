@@ -17,7 +17,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   // --- LOGIQUE DE CONNEXION AVEC SIMULATION DES ÉTATS DE VALIDATION ---
-  const handleLogin = (e) => {
+  const handleLogin = async(e) => {
     e.preventDefault();
     setError('');
 
@@ -39,8 +39,13 @@ const Login = () => {
     }
 
     // 3. SCÉNARIO : Connexion normale (Admin, Enseignant, Apprenant validé)
-    authService.login(email, password);
-    navigate('/accueil');
+    try {
+     await authService.login(email, password);
+      navigate('/accueil');
+    } 
+    catch (err) {
+    setError('Email ou mot de passe incorrect.');
+    }
   };
 
   // --- LOGIQUE D'INSCRIPTION (ENVOI REQUÊTE) ---
