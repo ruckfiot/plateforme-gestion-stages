@@ -9,23 +9,21 @@ const Stages = () => {
   const navigate = useNavigate();
   const user = authService.getCurrentUser();
 
-  // --- ÉTATS DYNAMIQUES (VRAIE BDD) ---
   const [stages, setStages] = useState([]);
   const [entreprisesList, setEntreprisesList] = useState([]);
   const [profsList, setProfsList] = useState([]);
   const [elevesList, setElevesList] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  const [dateSoutenance, setDateSoutenance] = useState('');
+  const [salleSoutenance, setSalleSoutenance] = useState('');
 
-  // --- CHARGEMENT DES DONNÉES ---
   const fetchData = async () => {
     setLoading(true);
     try {
-      // On charge le tableau principal
-      const stagesData = await stageService.getAllStages();
-      setStages(stagesData);
-
-      // On charge les listes pour les menus déroulants (si l'utilisateur est Admin)
+      let stagesData = [];
       if (user?.role === 'ADMIN') {
+        stagesData = await stageService.getAllStages();
         const entData = await entrepriseService.getAllEntreprises();
         const profsData = await utilisateurService.getEnseignants();
         const elevesData = await utilisateurService.getApprenants();
@@ -33,9 +31,17 @@ const Stages = () => {
         setEntreprisesList(entData);
         setProfsList(profsData);
         setElevesList(elevesData);
+      } else if (user?.role === 'ENSEIGNANT') {
+        stagesData = await stageService.getStagesByTuteur();
+      } else if (user?.role === 'APPRENANT') {
+        stagesData = await stageService.getStagesByApprenant();
       }
+      setStages(stagesData);
     } catch (error) {
       console.error("Erreur lors de la récupération des données :", error);
+      if (error.response && error.response.status === 403) {
+        alert("Accès refusé. Veuillez vous reconnecter.");
+      }
     } finally {
       setLoading(false);
     }
@@ -50,7 +56,6 @@ const Stages = () => {
     navigate('/');
   };
 
-  // --- ÉTATS DES MODALES ET RECHERCHE ---
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [viewModalData, setViewModalData] = useState(null); 
   const [editModalData, setEditModalData] = useState(null); 
@@ -64,10 +69,10 @@ const Stages = () => {
     etudiantId: '', 
     dateDebut: '', 
     duree: '', 
-    objectifs: ''
+    objectifs: '',
+    dateLimiteRapport: ''
   });
 
-  // --- ACTIONS VERS LE BACKEND ---
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -76,7 +81,8 @@ const Stages = () => {
         objectif: createFormData.objectifs,
         dateDebut: createFormData.dateDebut,
         duree: createFormData.duree,
-        etat: 'EN_COURS'
+        etat: 'EN_COURS',
+        dateLimiteRapport: createFormData.dateLimiteRapport || null
       };
 
       await stageService.createStage(
@@ -88,25 +94,27 @@ const Stages = () => {
       
       fetchData();
       setIsCreateOpen(false);
-      setCreateFormData({ sujet: '', entrepriseId: '', tuteurId: '', etudiantId: '', dateDebut: '', duree: '', objectifs: '' });
+      setCreateFormData({ sujet: '', entrepriseId: '', tuteurId: '', etudiantId: '', dateDebut: '', duree: '', objectifs: '', dateLimiteRapport: '' });
     } catch (err) {
       alert("Erreur lors de la création du stage.");
     }
+  };
+
+  const openEditModal = (stage) => {
+    setEditModalData(stage);
+    const laSoutenance = stage.soutenances && stage.soutenances.length > 0 ? stage.soutenances[0] : null;
+    setDateSoutenance(laSoutenance?.dateSoutenance ? laSoutenance.dateSoutenance.split('T')[0] : (stage.dateSoutenance ? stage.dateSoutenance.split('T')[0] : ''));
+    setSalleSoutenance(laSoutenance?.salle || '');
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
       const idStage = editModalData.idStage || editModalData.id;
-      
-      // Extraction des IDs nécessaires pour les @RequestParam du backend
       const idApprenant = editModalData.apprenant?.idApprenant;
       const idEntreprise = editModalData.entreprise?.idEntreprise;
-      
-      // Récupère soit la nouvelle sélection (tuteurId), soit l'ID actuel du tuteur
       const idTuteur = editModalData.tuteurId || editModalData.tuteur?.idEnseignant;
 
-      // Construction du corps conforme au modèle Stage.java
       const stageBody = {
         idStage: idStage,
         sujet: editModalData.sujet,
@@ -114,14 +122,14 @@ const Stages = () => {
         duree: editModalData.duree,
         objectif: editModalData.objectif,
         etat: editModalData.etat,
-        dateSoutenance: editModalData.dateSoutenance
+        dateSoutenance: dateSoutenance || null, 
+        salleSoutenance: salleSoutenance || null,
+        dateLimiteRapport: editModalData.dateLimiteRapport || null
       };
 
-      // Envoi de la requête avec les paramètres attendus par la méthode de StageController
       await stageService.updateStage(idStage, stageBody, idApprenant, idTuteur, idEntreprise);
-      
-      fetchData(); // Rafraîchissement global des lignes du tableau
-      setEditModalData(null); // Clôture de la modale active
+      fetchData(); 
+      setEditModalData(null); 
     } catch (err) {
       console.error("Erreur de mise à jour du stage :", err);
       alert("Erreur lors de la modification du stage.");
@@ -140,69 +148,99 @@ const Stages = () => {
     }
   };
 
-  // NOUVEAU : LOGIQUE D'UPLOAD DU RAPPORT (À faire dans un second temps)
-  const handleUploadRapport = (e) => {
-    e.preventDefault();
-    if (!selectedFile) return;
-    alert(`Le fichier "${selectedFile.name}" est prêt. L'envoi via FormData nécessitera une route Java spécifique.`);
-    // TODO: Implémenter le FormData quand Java sera prêt
+  // --- NOUVEAUTÉ : FONCTION POUR OUVRIR LE PDF ---
+  const ouvrirPDF = async (nomFichier) => {
+    try {
+      const blob = await stageService.lireRapport(nomFichier);
+      const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error(error);
+      alert("Erreur lors de l'ouverture du fichier.");
+    }
   };
 
-  // --- LOGIQUE D'AFFICHAGE SELON LE RÔLE ---
+const handleUploadRapport = async (e) => {
+    e.preventDefault();
+    if (!selectedFile) {
+      alert("Veuillez d'abord sélectionner un fichier.");
+      return;
+    }
+
+    const MAX_SIZE = 20 * 1024 * 1024; // 20 Mo
+    if (selectedFile.size > MAX_SIZE) {
+      alert("Fichier trop volumineux (Max 20 Mo).");
+      return;
+    }
+
+    try {
+      const id = viewModalData.idStage || viewModalData.id;
+      // L'appel est plus propre, plus besoin d'envoyer user.email !
+      await stageService.deposerRapport(id, selectedFile);
+      alert("Rapport déposé avec succès !");
+      
+      setViewModalData(null); 
+      setSelectedFile(null);
+      fetchData(); 
+    } catch (error) {
+      // Magie : Si Java renvoie une erreur 400, on l'affiche directement à l'écran !
+      const messageErreur = error.response?.data ? JSON.stringify(error.response.data) : "Erreur inconnue";
+      alert("Une erreur est survenue lors du dépôt : " + messageErreur);
+    }
+  };
+
   let displayedStages = stages;
   let titrePage = "Gestion des Stages";
 
   if (user?.role === 'ENSEIGNANT') {
     titrePage = "Mes Stages Supervisés";
-    // Exemple : displayedStages = stages.filter(stage => stage.enseignantTuteur?.email === user.email);
   } else if (user?.role === 'APPRENANT') {
     titrePage = "Mes Stages";
-    // Exemple : displayedStages = stages.filter(stage => stage.apprenant?.utilisateur?.email === user.email);
   }
 
-  // --- LOGIQUE DE RECHERCHE ---
-// --- LOGIQUE DE RECHERCHE ---
   if (searchQuery) {
     const lowerCaseQuery = searchQuery.toLowerCase();
     displayedStages = displayedStages.filter(stage => {
-      
-      // 1. Recherche dans le Sujet
       const matchSujet = (stage.titre || stage.sujet || '').toLowerCase().includes(lowerCaseQuery);
-      
-      // 2. Recherche dans l'Entreprise
       const matchEntreprise = (stage.entreprise?.raisonSociale || '').toLowerCase().includes(lowerCaseQuery);
-      
-      // 3. Recherche dans l'Élève (Nom + Prénom combinés)
       const eleveFullName = stage.apprenant ? `${stage.apprenant.nomApprenant} ${stage.apprenant.prenomApprenant}`.toLowerCase() : '';
       const matchEleve = eleveFullName.includes(lowerCaseQuery);
-      
-      // 4. Recherche dans le Tuteur (Nom + Prénom combinés)
       const tuteurFullName = stage.tuteur ? `${stage.tuteur.nomEnseignant} ${stage.tuteur.prenomEnseignant}`.toLowerCase() : '';
       const matchTuteur = tuteurFullName.includes(lowerCaseQuery);
-
-      // Si le texte tapé correspond à au moins UNE des catégories, on affiche la ligne !
       return matchSujet || matchEntreprise || matchEleve || matchTuteur;
     });
   }
 
   const renderStatut = (stage) => {
-    const etatActuel = stage.etat || 'EN_ATTENTE';
+    const etatActuel = (stage.etat || 'EN_ATTENTE').toUpperCase();
+    const aUnRapport = stage.rapports && stage.rapports.length > 0;
+    const aUneSoutenance = stage.soutenances && stage.soutenances.length > 0;
+    const noteRapport = aUnRapport ? stage.rapports[0].noteRapport : null;
+    const noteSoutenance = aUneSoutenance ? stage.soutenances[0].noteSoutenance : null;
 
-    if (user?.role === 'ENSEIGNANT') {
-       return <span style={{ backgroundColor: '#e67e22', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>À ÉVALUER</span>;
-    } else {
-      let bgColor = '#7f8c8d';
-      if (etatActuel.toLowerCase() === 'valide' || etatActuel.toLowerCase() === 'validé') bgColor = '#27ae60';
-      if (etatActuel.toLowerCase() === 'en_cours') bgColor = '#2980b9';
-      if (etatActuel.toLowerCase() === 'en_attente') bgColor = '#d35400';
-      
-      return <span style={{ backgroundColor: bgColor, color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>
-        {etatActuel.replace('_', ' ').toUpperCase()}
-      </span>;
+    if (noteRapport && noteSoutenance) {
+      return <span style={{ backgroundColor: '#27ae60', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>VALIDÉ</span>;
     }
+    
+    if (aUnRapport) {
+      const texte = user?.role === 'ENSEIGNANT' ? 'À ÉVALUER' : 'EN ÉVALUATION';
+      return <span style={{ backgroundColor: '#e67e22', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>{texte}</span>;
+    }
+
+    let bgColor = '#2980b9'; 
+    let texteAffiche = 'EN COURS';
+    if (etatActuel === 'EN_ATTENTE') {
+      bgColor = '#d35400'; 
+      texteAffiche = 'EN ATTENTE';
+    }
+
+    return (
+      <span style={{ backgroundColor: bgColor, color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>
+        {texteAffiche}
+      </span>
+    );
   };
 
-  // --- STYLES RÉUTILISABLES MODALES ---
   const overlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
   const modalStyle = { backgroundColor: '#2c2f33', padding: '30px', borderRadius: '10px', width: '90%', maxWidth: '500px', borderTop: '5px solid #3498db', maxHeight: '90vh', overflowY: 'auto' };
   const inputStyle = { width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #555', backgroundColor: '#1e2124', color: '#fff', boxSizing: 'border-box', marginBottom: '15px' };
@@ -213,7 +251,6 @@ const Stages = () => {
   return (
     <div style={{ padding: '40px', width: '100%', maxWidth: '1100px', boxSizing: 'border-box', margin: '0 auto', fontFamily: 'sans-serif', textAlign: 'left' }}>
       
-      {/* HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', borderBottom: '1px solid #444', paddingBottom: '20px' }}>
         <div>
           <h1 style={{ margin: 0, color: '#ffffff', fontSize: '32px' }}>{titrePage}</h1>
@@ -225,7 +262,6 @@ const Stages = () => {
         </div>
       </div>
 
-      {/* BARRE D'ACTIONS : RECHERCHE ET CRÉATION */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
         <input 
           type="text" 
@@ -241,7 +277,6 @@ const Stages = () => {
         )}
       </div>
 
-      {/* TABLEAU */}
       <div style={{ backgroundColor: '#2c2f33', padding: '30px', borderRadius: '10px', boxShadow: '0 8px 15px rgba(0,0,0,0.2)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
@@ -258,7 +293,6 @@ const Stages = () => {
             {displayedStages.length > 0 ? (
               displayedStages.map((stage) => {
                 const id = stage.idStage || stage.id;
-                // Résolution dynamique des noms selon ton modèle
                 const nomEntreprise = stage.entreprise?.raisonSociale || "Non assignée";
                 const nomEleve = stage.apprenant ? `${stage.apprenant.nomApprenant} ${stage.apprenant.prenomApprenant}` : "Non assigné";
                 const nomTuteur = stage.tuteur ? `${stage.tuteur.nomEnseignant} ${stage.tuteur.prenomEnseignant}` : "Non assigné";
@@ -275,7 +309,7 @@ const Stages = () => {
                       {user?.role === 'ADMIN' && (
                         <div style={{ display: 'flex', gap: '10px' }}>
                           <button onClick={() => setViewModalData(stage)} style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#3498db', color: '#ffffff', border: 'none', borderRadius: '5px', fontSize: '13px', fontWeight: 'bold' }}>Voir</button>
-                          <button onClick={() => setEditModalData(stage)} style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#36393f', color: '#ffffff', border: '1px solid #555', borderRadius: '5px', fontSize: '13px' }}>Modifier</button>
+                          <button onClick={() => openEditModal(stage)} style={{ padding: '8px 12px', cursor: 'pointer', backgroundColor: '#36393f', color: '#ffffff', border: '1px solid #555', borderRadius: '5px', fontSize: '13px' }}>Modifier</button>
                         </div>
                       )}
                       
@@ -304,9 +338,7 @@ const Stages = () => {
         </table>
       </div>
 
-      {/* =========================================================
-          MODALE 1 : CRÉER UN STAGE (ADMIN)
-      ========================================================= */}
+      {/* MODALE 1 : CRÉER */}
       {isCreateOpen && (
         <div style={overlayStyle}>
           <div style={{ ...modalStyle, borderTopColor: '#2ecc71' }}>
@@ -349,6 +381,9 @@ const Stages = () => {
                 </div>
               </div>
 
+              <label style={labelStyle}>Date limite de rendu du rapport</label>
+              <input type="date" style={inputStyle} value={createFormData.dateLimiteRapport} onChange={(e) => setCreateFormData({...createFormData, dateLimiteRapport: e.target.value})} />
+
               <label style={labelStyle}>Objectifs / Description</label>
               <textarea required rows="3" style={{ ...inputStyle, resize: 'none' }} value={createFormData.objectifs} onChange={(e) => setCreateFormData({...createFormData, objectifs: e.target.value})}></textarea>
               
@@ -361,9 +396,7 @@ const Stages = () => {
         </div>
       )}
 
-{/* =========================================================
-          MODALE 2 : DÉTAILS DU STAGE (VUE COMMUNE)
-      ========================================================= */}
+      {/* MODALE 2 : DÉTAILS DU STAGE */}
       {viewModalData && (
         <div style={overlayStyle}>
           <div style={modalStyle}>
@@ -372,7 +405,6 @@ const Stages = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', color: '#ddd', fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
               <div style={{ gridColumn: 'span 2', paddingBottom: '10px', borderBottom: '1px solid #444' }}>
                 <span style={{ color: '#aaa', fontSize: '12px', display: 'block' }}>Sujet et Description</span>
-                {}
                 <b style={{ color: '#fff', fontSize: '16px' }}>{viewModalData.sujet}</b>
                 <p style={{ margin: '5px 0 0 0', fontStyle: 'italic', color: '#bbb' }}>"{viewModalData.objectif}"</p>
               </div>
@@ -392,17 +424,48 @@ const Stages = () => {
               <div><span style={{ color: '#aaa', display: 'block' }}>Date de début :</span> <b>{viewModalData.dateDebut || 'Non définie'}</b></div>
               <div><span style={{ color: '#aaa', display: 'block' }}>Durée :</span> <b>{viewModalData.duree || 'Non définie'}</b></div>
               <div><span style={{ color: '#aaa', display: 'block' }}>Statut :</span> <b>{viewModalData.etat || 'Non défini'}</b></div>
+              
+              <div><span style={{ color: '#aaa', display: 'block' }}>Date limite rapport :</span> 
+                <b style={{ color: '#3498db' }}>{viewModalData.dateLimiteRapport ? viewModalData.dateLimiteRapport.split('T')[0] : 'Non définie'}</b>
+              </div>
+              <div></div> {/* Élément vide pour garder la grille alignée */}
+
+              <div style={{ gridColumn: 'span 2', height: '1px', backgroundColor: '#444', margin: '5px 0' }}></div>
+              
+              <div>
+                <span style={{ color: '#aaa', display: 'block' }}>Date de soutenance :</span> 
+                <b style={{ color: '#f39c12' }}>
+                  {viewModalData.soutenances && viewModalData.soutenances.length > 0 && viewModalData.soutenances[0].dateSoutenance 
+                    ? viewModalData.soutenances[0].dateSoutenance.split('T')[0] 
+                    : viewModalData.dateSoutenance 
+                      ? viewModalData.dateSoutenance.split('T')[0] 
+                      : 'Non définie'}
+                </b>
+              </div>
+              <div>
+                <span style={{ color: '#aaa', display: 'block' }}>Salle assignée :</span> 
+                <b style={{ color: '#f39c12' }}>
+                  {viewModalData.soutenances && viewModalData.soutenances.length > 0 && viewModalData.soutenances[0].salle 
+                    ? viewModalData.soutenances[0].salle 
+                    : 'Non assignée'}
+                </b>
+              </div>
             </div>
 
-            {/* SYSTÈME DE GESTION DU RAPPORTÉ ÉCRIT */}
             <div style={{ borderTop: '1px solid #444', paddingTop: '15px' }}>
               <h3 style={{ color: '#fff', fontSize: '15px', margin: '0 0 10px 0' }}>📄 Document du Rapport</h3>
               
-              {viewModalData.rapport ? (
+              {viewModalData.rapports && viewModalData.rapports.length > 0 && viewModalData.rapports[0].nomFichier ? (
                 <div style={{ backgroundColor: '#2ecc7115', border: '1px dashed #2ecc71', padding: '15px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <span style={{ color: '#2ecc71', fontWeight: 'bold', display: 'block', fontSize: '13px' }}>Fichier en ligne :</span>
-                    <a href="#" style={{ color: '#fff', fontSize: '14px', textDecoration: 'underline' }}>{viewModalData.rapport}</a>
+                    
+                    <span 
+                      onClick={() => ouvrirPDF(viewModalData.rapports[0].nomFichier)} 
+                      style={{ color: '#fff', fontSize: '14px', textDecoration: 'underline', cursor: 'pointer' }}>
+                      {viewModalData.rapports[0].nomFichier}
+                    </span>
+
                   </div>
                   <span style={{ color: '#aaa', fontSize: '11px' }}>Prêt pour évaluation</span>
                 </div>
@@ -432,6 +495,47 @@ const Stages = () => {
               )}
             </div>
 
+            {/* RETOURS DE L'ENSEIGNANT */}
+            {( (viewModalData.rapports && viewModalData.rapports.length > 0 && (viewModalData.rapports[0].commentaire || viewModalData.rapports[0].noteRapport)) || 
+               (viewModalData.soutenances && viewModalData.soutenances.length > 0 && (viewModalData.soutenances[0].commentaireSoutenance || viewModalData.soutenances[0].noteSoutenance)) ) && (
+              
+              <div style={{ borderTop: '1px solid #444', paddingTop: '15px', marginTop: '20px' }}>
+                <h3 style={{ color: '#fff', fontSize: '15px', margin: '0 0 15px 0' }}>Retours de l'enseignant</h3>
+                
+                {viewModalData.rapports && viewModalData.rapports.length > 0 && (viewModalData.rapports[0].commentaire || viewModalData.rapports[0].noteRapport) && (
+                  <div style={{ marginBottom: '15px', padding: '15px', backgroundColor: '#1e2124', borderRadius: '6px', borderLeft: '4px solid #3498db' }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                        <span style={{ color: '#3498db', fontSize: '13px', fontWeight: 'bold' }}>Rapport Écrit</span>
+                        <span style={{ color: '#2ecc71', fontWeight: 'bold', fontSize: '14px' }}>
+                          {viewModalData.rapports[0].noteRapport ? `${viewModalData.rapports[0].noteRapport} / 20` : 'En attente de note'}
+                        </span>
+                     </div>
+                     {viewModalData.rapports[0].commentaire ? (
+                        <p style={{ color: '#ddd', fontSize: '13px', margin: '5px 0 0 0', fontStyle: 'italic', lineHeight: '1.5' }}>"{viewModalData.rapports[0].commentaire}"</p>
+                     ) : (
+                        <p style={{ color: '#777', fontSize: '12px', margin: '5px 0 0 0', fontStyle: 'italic' }}>Aucun commentaire laissé.</p>
+                     )}
+                  </div>
+                )}
+
+                {viewModalData.soutenances && viewModalData.soutenances.length > 0 && (viewModalData.soutenances[0].commentaireSoutenance || viewModalData.soutenances[0].noteSoutenance) && (
+                  <div style={{ padding: '15px', backgroundColor: '#1e2124', borderRadius: '6px', borderLeft: '4px solid #e67e22' }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                        <span style={{ color: '#e67e22', fontSize: '13px', fontWeight: 'bold' }}>Soutenance Orale</span>
+                        <span style={{ color: '#2ecc71', fontWeight: 'bold', fontSize: '14px' }}>
+                          {viewModalData.soutenances[0].noteSoutenance ? `${viewModalData.soutenances[0].noteSoutenance} / 20` : 'En attente de note'}
+                        </span>
+                     </div>
+                     {viewModalData.soutenances[0].commentaireSoutenance ? (
+                        <p style={{ color: '#ddd', fontSize: '13px', margin: '5px 0 0 0', fontStyle: 'italic', lineHeight: '1.5' }}>"{viewModalData.soutenances[0].commentaireSoutenance}"</p>
+                     ) : (
+                        <p style={{ color: '#777', fontSize: '12px', margin: '5px 0 0 0', fontStyle: 'italic' }}>Aucun commentaire laissé.</p>
+                     )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '25px' }}>
               <button onClick={() => setViewModalData(null)} style={{ padding: '10px 20px', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Fermer</button>
             </div>
@@ -439,9 +543,7 @@ const Stages = () => {
         </div>
       )}
 
-      {/* =========================================================
-          MODALE 3 : MODIFIER LE STAGE (ADMIN)
-      ========================================================= */}
+      {/* MODALE 3 : MODIFIER */}
       {editModalData && (
         <div style={overlayStyle}>
           <div style={{ ...modalStyle, borderTopColor: '#f39c12' }}>
@@ -458,22 +560,13 @@ const Stages = () => {
               <label style={labelStyle}>Sujet du stage</label>
               <input type="text" required style={inputStyle} value={editModalData.sujet || ''} onChange={(e) => setEditModalData({...editModalData, sujet: e.target.value})} />
               
-              {/* --- NOUVEAU CHAMP : SÉLECTION DU TUTEUR --- */}
               <label style={labelStyle}>Tuteur Enseignant référent</label>
-              <select 
-                required 
-                style={inputStyle} 
-                value={editModalData.tuteurId || editModalData.tuteur?.idEnseignant || ''} 
-                onChange={(e) => setEditModalData({...editModalData, tuteurId: e.target.value})}
-              >
+              <select required style={inputStyle} value={editModalData.tuteurId || editModalData.tuteur?.idEnseignant || ''} onChange={(e) => setEditModalData({...editModalData, tuteurId: e.target.value})}>
                 <option value="">Sélectionner un enseignant...</option>
                 {profsList.map((p) => (
-                  <option key={p.idEnseignant} value={p.idEnseignant}>
-                    {p.nomEnseignant} {p.prenomEnseignant}
-                  </option>
+                  <option key={p.idEnseignant} value={p.idEnseignant}>{p.nomEnseignant} {p.prenomEnseignant}</option>
                 ))}
               </select>
-              {/* ------------------------------------------- */}
 
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div style={{ flex: 1 }}>
@@ -483,6 +576,20 @@ const Stages = () => {
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>Durée</label>
                   <input type="text" required style={inputStyle} value={editModalData.duree || ''} onChange={(e) => setEditModalData({...editModalData, duree: e.target.value})} />
+                </div>
+              </div>
+
+              <label style={labelStyle}>Date limite de rendu du rapport</label>
+              <input type="date" style={inputStyle} value={editModalData.dateLimiteRapport || ''} onChange={(e) => setEditModalData({...editModalData, dateLimiteRapport: e.target.value})} />
+
+              <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Date de soutenance</label>
+                  <input type="date" value={dateSoutenance} onChange={(e) => setDateSoutenance(e.target.value)} style={{...inputStyle, marginBottom: 0}} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Salle assignée</label>
+                  <input type="text" placeholder="Ex: Salle B12" value={salleSoutenance} onChange={(e) => setSalleSoutenance(e.target.value)} style={{...inputStyle, marginBottom: 0}} />
                 </div>
               </div>
 

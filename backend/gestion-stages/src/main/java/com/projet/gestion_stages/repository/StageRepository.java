@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface StageRepository extends JpaRepository<Stage, Long> {
     
     // Par tuteur (vue tuteur)
-    List<Stage> findByTuteurIdEnseignant(Long idTuteur);
+    List<Stage> findByTuteur_IdEnseignant(Long idEnseignant);
     
     // Par apprenant (vue apprenant)
     List<Stage> findByApprenantIdApprenant(Long idApprenant);
