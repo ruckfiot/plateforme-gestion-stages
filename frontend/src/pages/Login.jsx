@@ -17,7 +17,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   // --- LOGIQUE DE CONNEXION AVEC SIMULATION DES ÉTATS DE VALIDATION ---
-const handleLogin = async (e) => { // <-- 1. Ne pas oublier le mot "async" ici !
+  const handleLogin = async(e) => {
     e.preventDefault();
     setError('');
 
@@ -38,18 +38,13 @@ const handleLogin = async (e) => { // <-- 1. Ne pas oublier le mot "async" ici !
       return;
     }
 
-    // 3. SCÉNARIO : Connexion normale (Vrai Backend)
+    // 3. SCÉNARIO : Connexion normale (Admin, Enseignant, Apprenant validé)
     try {
-      // 2. On ATTEND (await) la réponse du serveur avant de faire quoi que ce soit d'autre
-      await authService.login(email, password);
-      
-      // 3. Si le serveur répond "OK", on navigue vers l'accueil !
+     await authService.login(email, password);
       navigate('/accueil');
-      
-    } catch (err) {
-      // 4. Si le serveur refuse (mauvais mot de passe), on l'affiche proprement
-      console.error(err);
-      setError('Identifiants incorrects ou compte non validé.');
+    } 
+    catch (err) {
+    setError('Email ou mot de passe incorrect.');
     }
   };
 

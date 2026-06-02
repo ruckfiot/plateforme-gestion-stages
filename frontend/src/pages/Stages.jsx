@@ -224,7 +224,7 @@ const handleUploadRapport = async (e) => {
     
     if (aUnRapport) {
       const texte = user?.role === 'ENSEIGNANT' ? 'À ÉVALUER' : 'EN ÉVALUATION';
-      return <span style={{ backgroundColor: '#e67e22', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>{texte}</span>;
+      return <span style={{ backgroundColor: '#e67e22', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap'  }}>{texte}</span>;
     }
 
     let bgColor = '#2980b9'; 
