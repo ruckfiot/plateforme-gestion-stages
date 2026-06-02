@@ -18,7 +18,7 @@ public class Stage {
     private LocalDate dateDebut;
     private String duree;
     private String objectif;
-    private String etat = "EN_COURS"; // EN_COURS, TERMINE, VALIDE
+    private String etat;
     private LocalDate dateSoutenance;
     private LocalDate dateLimiteRapport;
     
