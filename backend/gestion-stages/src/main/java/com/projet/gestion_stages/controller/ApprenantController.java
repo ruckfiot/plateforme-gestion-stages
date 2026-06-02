@@ -2,8 +2,8 @@ package com.projet.gestion_stages.controller;
 
 import com.projet.gestion_stages.model.Apprenant;
 import com.projet.gestion_stages.service.ApprenantService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,15 +25,23 @@ public class ApprenantController {
     }
 
     @PostMapping
-    public ResponseEntity<Apprenant> addApprenant(@RequestBody Apprenant apprenant) {
-        Apprenant newApprenant = apprenantService.createApprenant(apprenant);
-        return new ResponseEntity<>(newApprenant, HttpStatus.CREATED);
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Apprenant> createApprenant(
+            @RequestBody Apprenant apprenant, 
+            @RequestParam(required = false) Long idPromotion) { 
+        Apprenant created = apprenantService.createApprenant(apprenant, idPromotion);
+        return ResponseEntity.ok(created);
     }
 
     // --- NOUVELLES ROUTES POUR VALIDER/MODIFIER/SUPPRIMER ---
     @PutMapping("/{id}")
-    public ResponseEntity<Apprenant> updateApprenant(@PathVariable Long id, @RequestBody Apprenant details) {
-        return apprenantService.updateApprenant(id, details)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Apprenant> updateApprenant(
+            @PathVariable Long id, 
+            @RequestBody Apprenant details, 
+            @RequestParam(required = false) Long idPromotion) { 
+        
+        return apprenantService.updateApprenant(id, details, idPromotion)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
