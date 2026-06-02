@@ -4,6 +4,7 @@ import entrepriseService from '../services/entrepriseService';
 import stageService from '../services/stageService';
 import { useNavigate } from 'react-router-dom';
 import utilisateurService from '../services/utilisateurService';
+import SettingsPanel from '../components/SettingsPanel';
 
 const Accueil = () => {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ const Accueil = () => {
   const [nbEtudiants, setNbEtudiants] = useState(0);
   const [nbRapports, setNbRapports] = useState(0);
   const [monStage, setMonStage] = useState(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // --- NOUVEAUX ÉTATS POUR LE BACKEND ---
   // On prépare des "boîtes" pour stocker les vraies données issues de la base de données
@@ -332,6 +334,7 @@ const getMessageActualite = () => {
   return (
     <div style={{ padding: '40px', width: '100%', maxWidth: '1100px', boxSizing: 'border-box', margin: '0 auto', fontFamily: 'sans-serif', textAlign: 'left' }}>
 
+      <SettingsPanel isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
       {/* HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', borderBottom: '1px solid #444', paddingBottom: '20px' }}>
@@ -341,7 +344,7 @@ const getMessageActualite = () => {
         </div>
         <div style={{ display: 'flex', gap: '15px' }}>
           <button 
-            onClick={() => navigate('/parametres')}
+            onClick={() => setIsSettingsOpen(true)} // <-- MODIFIE JUSTE CETTE LIGNE
             style={{ padding: '10px', backgroundColor: '#34495e', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             title="Paramètres"
           >

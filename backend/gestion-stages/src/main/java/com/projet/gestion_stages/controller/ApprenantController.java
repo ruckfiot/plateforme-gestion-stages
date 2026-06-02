@@ -10,6 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/apprenants")
+@CrossOrigin(origins = "*") 
 public class ApprenantController {
 
     private final ApprenantService apprenantService;
@@ -29,9 +30,10 @@ public class ApprenantController {
         return new ResponseEntity<>(newApprenant, HttpStatus.CREATED);
     }
 
+    // --- NOUVELLES ROUTES POUR VALIDER/MODIFIER/SUPPRIMER ---
     @PutMapping("/{id}")
-    public ResponseEntity<Apprenant> updateApprenant(@PathVariable Long id, @RequestBody Apprenant apprenantDetails) {
-        return apprenantService.updateApprenant(id, apprenantDetails)
+    public ResponseEntity<Apprenant> updateApprenant(@PathVariable Long id, @RequestBody Apprenant details) {
+        return apprenantService.updateApprenant(id, details)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

@@ -212,14 +212,22 @@ const handleUploadRapport = async (e) => {
   }
 
   const renderStatut = (stage) => {
+    // On met en majuscule par sécurité pour éviter les bugs de casse
     const etatActuel = (stage.etat || 'EN_ATTENTE').toUpperCase();
+
+    // 1. NOUVEAUTÉ : On détecte ton état "TERMINE"
+    if (etatActuel === 'TERMINE' || etatActuel === 'VALIDE') {
+      return <span style={{ backgroundColor: '#27ae60', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>TERMINÉ</span>;
+    }
+
+    // 2. Logique automatique (selon les notes / rapports déposés)
     const aUnRapport = stage.rapports && stage.rapports.length > 0;
     const aUneSoutenance = stage.soutenances && stage.soutenances.length > 0;
     const noteRapport = aUnRapport ? stage.rapports[0].noteRapport : null;
     const noteSoutenance = aUneSoutenance ? stage.soutenances[0].noteSoutenance : null;
 
     if (noteRapport && noteSoutenance) {
-      return <span style={{ backgroundColor: '#27ae60', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>VALIDÉ</span>;
+      return <span style={{ backgroundColor: '#27ae60', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>TERMINÉ</span>;
     }
     
     if (aUnRapport) {
@@ -227,13 +235,12 @@ const handleUploadRapport = async (e) => {
       return <span style={{ backgroundColor: '#e67e22', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap'  }}>{texte}</span>;
     }
 
-    let bgColor = '#2980b9'; 
-    let texteAffiche = 'EN COURS';
+    // 3. Détection de l'attente
     if (etatActuel === 'EN_ATTENTE') {
-      bgColor = '#d35400'; 
-      texteAffiche = 'EN ATTENTE';
+      return <span style={{ backgroundColor: '#d35400', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>EN ATTENTE</span>;
     }
 
+    // 4. Par défaut, pour tout le reste (et donc ton "EN_COURS")
     return (
       <span style={{ backgroundColor: bgColor, color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
         {texteAffiche}
@@ -571,10 +578,10 @@ const handleUploadRapport = async (e) => {
             
             <form onSubmit={handleEditSubmit}>
               <label style={labelStyle}>État actuel du stage</label>
-              <select style={inputStyle} value={editModalData.etat || ''} onChange={(e) => setEditModalData({...editModalData, etat: e.target.value})}>
+              <select style={inputStyle} value={editModalData.etat || 'EN_ATTENTE'} onChange={(e) => setEditModalData({...editModalData, etat: e.target.value})}>
                 <option value="EN_ATTENTE">En attente (Non commencé)</option>
                 <option value="EN_COURS">En cours</option>
-                <option value="VALIDE">Validé (Terminé)</option>
+                <option value="TERMINE">Terminé</option>
               </select>
 
               <label style={labelStyle}>Sujet du stage</label>
