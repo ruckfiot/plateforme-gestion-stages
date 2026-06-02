@@ -23,6 +23,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional; // <-- IMPORT IMPORTANT
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -116,12 +118,47 @@ public class AuthController {
                     new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getMotDePasse()));
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = jwtUtils.generateJwtToken(loginRequest.getEmail());
+            
             Utilisateur user = utilisateurRepository.findByEmail(loginRequest.getEmail()).get();
-            return ResponseEntity.ok(new JwtResponse(jwt, user.getEmail(), user.getRole().name()));
+            
+            // --- ON RENVOIE MAINTENANT LE STATUT À REACT ---
+            return ResponseEntity.ok(new JwtResponse(jwt, user.getEmail(), user.getRole().name(), user.getStatut()));
+            
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Erreur : Email ou mot de passe incorrect.");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur interne : " + e.getMessage());
         }
+    }
+    
+    @PutMapping("/change-password")
+    @Transactional
+    public ResponseEntity<?> changePassword(@RequestBody Map<String, String> body) {
+        String email            = body.get("email");
+        String ancienMdp        = body.get("ancienMotDePasse");
+        String nouveauMdp       = body.get("nouveauMotDePasse");
+
+        if (email == null || ancienMdp == null || nouveauMdp == null) {
+            return ResponseEntity.badRequest().body("Tous les champs sont requis.");
+        }
+        if (nouveauMdp.length() < 6) {
+            return ResponseEntity.badRequest().body("Le nouveau mot de passe doit contenir au moins 6 caractères.");
+        }
+
+        Optional<Utilisateur> optUser = utilisateurRepository.findByEmail(email);
+        if (optUser.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Utilisateur introuvable.");
+        }
+
+        Utilisateur utilisateur = optUser.get();
+
+        if (!passwordEncoder.matches(ancienMdp, utilisateur.getMotDePasse())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Mot de passe actuel incorrect.");
+        }
+
+        utilisateur.setMotDePasse(passwordEncoder.encode(nouveauMdp));
+        utilisateurRepository.save(utilisateur);
+
+        return ResponseEntity.ok("Mot de passe mis à jour avec succès.");
     }
 }
