@@ -242,8 +242,8 @@ const handleUploadRapport = async (e) => {
 
     // 4. Par défaut, pour tout le reste (et donc ton "EN_COURS")
     return (
-      <span style={{ backgroundColor: bgColor, color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-        {texteAffiche}
+      <span style={{ backgroundColor: '#2980b9', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>
+        EN COURS
       </span>
     );
   };
@@ -460,42 +460,22 @@ const handleUploadRapport = async (e) => {
             </div>
 
             <div style={{ borderTop: '1px solid #444', paddingTop: '15px' }}>
-              <h3 style={{ color: '#fff', fontSize: '15px', margin: '0 0 10px 0' }}> Document du Rapport</h3>
+              <h3 style={{ color: '#fff', fontSize: '15px', margin: '0 0 10px 0' }}>📄 Document du Rapport</h3>
               
               {viewModalData.rapports && viewModalData.rapports.length > 0 && viewModalData.rapports[0].nomFichier ? (
-  <div style={{ backgroundColor: '#2ecc7115', border: '1px dashed #2ecc71', padding: '15px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-    <div>
-      <span style={{ color: '#2ecc71', fontWeight: 'bold', display: 'block', fontSize: '13px' }}>Fichier en ligne :</span>
-      <span 
-        onClick={() => ouvrirPDF(viewModalData.rapports[0].nomFichier)} 
-        style={{ color: '#fff', fontSize: '14px', textDecoration: 'underline', cursor: 'pointer' }}>
-        {viewModalData.rapports[0].nomFichier}
-      </span>
-    </div>
-    {user?.role === 'APPRENANT' ? (
-      <button
-        onClick={async () => {
-          if (window.confirm("Supprimer ce rapport ? Cette action est irréversible.")) {
-            try {
-              const id = viewModalData.idStage || viewModalData.id;
-              await stageService.supprimerRapport(id);
-              alert("Rapport supprimé avec succès.");
-              setViewModalData(null);
-              fetchData();
-            } catch (e) {
-              alert("Erreur lors de la suppression : " + e.message);
-            }
-          }
-        }}
-        style={{ padding: '7px 13px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}
-      >
-        🗑 Supprimer
-      </button>
-    ) : (
-      <span style={{ color: '#aaa', fontSize: '11px' }}>Prêt pour évaluation</span>
-    )}
-  </div>
+                <div style={{ backgroundColor: '#2ecc7115', border: '1px dashed #2ecc71', padding: '15px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ color: '#2ecc71', fontWeight: 'bold', display: 'block', fontSize: '13px' }}>Fichier en ligne :</span>
+                    
+                    <span 
+                      onClick={() => ouvrirPDF(viewModalData.rapports[0].nomFichier)} 
+                      style={{ color: '#fff', fontSize: '14px', textDecoration: 'underline', cursor: 'pointer' }}>
+                      {viewModalData.rapports[0].nomFichier}
+                    </span>
 
+                  </div>
+                  <span style={{ color: '#aaa', fontSize: '11px' }}>Prêt pour évaluation</span>
+                </div>
               ) : user?.role === 'APPRENANT' ? (
                 <form onSubmit={handleUploadRapport}>
                   <div style={{ backgroundColor: '#1e2124', border: '2px dashed #555', padding: '20px', borderRadius: '6px', textAlign: 'center', cursor: 'pointer', position: 'relative' }}>

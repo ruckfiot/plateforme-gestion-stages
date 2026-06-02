@@ -80,16 +80,6 @@ const lireRapport = async (nomFichier) => {
     return response.data;
 };
 
-const supprimerRapport = async (idStage) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const response = await axios.delete(`${API_URL}/${idStage}/rapport`, {
-        headers: {
-            'Authorization': `Bearer ${user?.token}`
-        }
-    });
-    return response.data;
-};
-
 const evaluerStage = async (idStage, evaluationData) => {
   const user = JSON.parse(localStorage.getItem('user'));
   const response = await api.post(`/stages/${idStage}/evaluer`, evaluationData, {
@@ -109,8 +99,7 @@ const stageService = {
   getStagesByApprenant,
   deposerRapport,
   lireRapport,
-  evaluerStage,
-  supprimerRapport
+  evaluerStage
 };
 
 export default stageService;
