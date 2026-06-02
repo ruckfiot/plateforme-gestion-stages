@@ -19,4 +19,8 @@ public class Utilisateur {
 
     @Enumerated(EnumType.STRING)
     private Role role;
+
+    // Par défaut, toute création de compte est mise "EN_ATTENTE"
+    @Column(nullable = false)
+    private String statut = "EN_ATTENTE";
 }

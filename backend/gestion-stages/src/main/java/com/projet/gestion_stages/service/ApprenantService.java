@@ -5,7 +5,6 @@ import com.projet.gestion_stages.model.PromotionFiliere;
 import com.projet.gestion_stages.repository.ApprenantRepository;
 import com.projet.gestion_stages.repository.PromotionFiliereRepository;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -13,20 +12,19 @@ import java.util.Optional;
 public class ApprenantService {
 
     private final ApprenantRepository apprenantRepository;
-    private final PromotionFiliereRepository promotionRepository; // <-- NOUVEAU
+    private final PromotionFiliereRepository promotionRepository;
 
-    // Injection de dépendances via le constructeur
+    // On garde l'injection de dépendances complète (Ta version)
     public ApprenantService(ApprenantRepository apprenantRepository, PromotionFiliereRepository promotionRepository) {
         this.apprenantRepository = apprenantRepository;
-        this.promotionRepository = promotionRepository; // <-- NOUVEAU
+        this.promotionRepository = promotionRepository;
     }
 
-    // Méthode pour récupérer tous les apprenants
     public List<Apprenant> getAllApprenants() {
         return apprenantRepository.findAll();
     }
 
-    // Méthode pour ajouter un nouvel apprenant
+    // On garde ta signature avec idPromotion
     public Apprenant createApprenant(Apprenant apprenant, Long idPromotion) {
         // --- NOUVEAUTÉ : Gestion de la promotion à la création ---
         if (idPromotion != null) {
@@ -37,16 +35,19 @@ public class ApprenantService {
         return apprenantRepository.save(apprenant);
     }
     
-    // Méthode pour mettre à jour un apprenant
+    // FUSION : On garde ton idPromotion + numEtudiant, ET la validation du main
     public Optional<Apprenant> updateApprenant(Long id, Apprenant details, Long idPromotion) {
         return apprenantRepository.findById(id).map(apprenant -> {
             apprenant.setNomApprenant(details.getNomApprenant());
             apprenant.setPrenomApprenant(details.getPrenomApprenant());
-            apprenant.setNumEtudiant(details.getNumEtudiant());
+            apprenant.setNumEtudiant(details.getNumEtudiant()); // Ta modification
             
-            // On met à jour le statut (EN_ATTENTE -> VALIDE)
+            // Modification venant du main : On valide aussi le compte de connexion !
             if(details.getStatut() != null) {
                 apprenant.setStatut(details.getStatut());
+                if (apprenant.getUtilisateur() != null) {
+                    apprenant.getUtilisateur().setStatut(details.getStatut());
+                }
             }
 
             // --- NOUVEAUTÉ : Gestion de la promotion à la modification ---

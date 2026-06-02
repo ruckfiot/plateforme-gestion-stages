@@ -5,6 +5,7 @@ import com.projet.gestion_stages.repository.EnseignantRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class EnseignantService {
@@ -23,15 +24,18 @@ public class EnseignantService {
         return enseignantRepository.save(enseignant);
     }
 
-    public java.util.Optional<Enseignant> updateEnseignant(Long id, Enseignant details) {
+    public Optional<Enseignant> updateEnseignant(Long id, Enseignant details) {
         return enseignantRepository.findById(id).map(enseignant -> {
             enseignant.setNomEnseignant(details.getNomEnseignant());
             enseignant.setPrenomEnseignant(details.getPrenomEnseignant());
             enseignant.setMatiere(details.getMatiere());
             
-            // On vérifie que le statut n'est pas écrasé par du vide
             if(details.getStatut() != null) {
                 enseignant.setStatut(details.getStatut());
+                // HYPER IMPORTANT : Synchroniser avec la table utilisateur !
+                if (enseignant.getUtilisateur() != null) {
+                    enseignant.getUtilisateur().setStatut(details.getStatut());
+                }
             }
             
             return enseignantRepository.save(enseignant);

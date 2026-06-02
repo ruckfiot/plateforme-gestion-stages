@@ -7,10 +7,12 @@ public class JwtResponse {
     private String token;
     private String email;
     private String role;
+    private String statut;
 
-    public JwtResponse(String token, String email, String role) {
+    public JwtResponse(String token, String email, String role, String statut) {
         this.token = token;
         this.email = email;
         this.role = role;
+        this.statut = statut;
     }
 }
