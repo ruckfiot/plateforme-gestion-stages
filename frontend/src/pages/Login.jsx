@@ -26,13 +26,13 @@ const Login = () => {
       return;
     }
 
-    // 1. SCÉNARIO : Compte en cours de validation
+    // 1. SCÉNARIO : Compte en cours de validation (Mock pour tester l'interface)
     if (email === 'attente@test.com') {
       setView('pending-login');
       return;
     }
 
-    // 2. SCÉNARIO : Compte refusé par l'admin
+    // 2. SCÉNARIO : Compte refusé par l'admin (Mock pour tester l'interface)
     if (email === 'refuse@test.com') {
       setError('Impossible de créer ce compte. Votre demande d\'inscription a été refusée par l\'administrateur.');
       return;

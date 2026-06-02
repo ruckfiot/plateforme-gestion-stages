@@ -28,4 +28,19 @@ public class ApprenantController {
         Apprenant newApprenant = apprenantService.createApprenant(apprenant);
         return new ResponseEntity<>(newApprenant, HttpStatus.CREATED);
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Apprenant> updateApprenant(@PathVariable Long id, @RequestBody Apprenant apprenantDetails) {
+        return apprenantService.updateApprenant(id, apprenantDetails)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteApprenant(@PathVariable Long id) {
+        if(apprenantService.deleteApprenant(id)) {
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
 }

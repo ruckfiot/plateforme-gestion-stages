@@ -2,13 +2,22 @@ package com.projet.gestion_stages.controller;
 
 import com.projet.gestion_stages.model.Stage;
 import com.projet.gestion_stages.service.*;
+
+// --- LES IMPORTS CORRIGÉS ---
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+// -----------------------------
 
 @RestController
 @RequestMapping("/api/stages")
@@ -20,14 +29,14 @@ public class StageController {
     private final SoutenanceService soutenanceService;
     
     public StageController(
-    StageService stageService, 
-    RapportService rapportService, 
-    SoutenanceService soutenanceService
-) {
-    this.stageService = stageService;
-    this.rapportService = rapportService;
-    this.soutenanceService = soutenanceService;
-}
+        StageService stageService, 
+        RapportService rapportService, 
+        SoutenanceService soutenanceService
+    ) {
+        this.stageService = stageService;
+        this.rapportService = rapportService;
+        this.soutenanceService = soutenanceService;
+    }
     
     // ADMIN: TOUS les stages
     @GetMapping
@@ -126,17 +135,47 @@ public class StageController {
         return ResponseEntity.ok(stageService.getStagesByApprenant(idApprenant));
     }
     
-    // APPRENANT: Rapport PDF
+// ROUTE 1 : Pour l'UPLOAD (Sécurisée avec Authentication)
     @PostMapping("/{id}/rapport")
-    @PreAuthorize("hasRole('APPRENANT')")
-    public ResponseEntity<Map<String, Object>> deposerRapport(
-            @PathVariable Long id, 
-            @RequestParam("file") MultipartFile file,
-            Authentication auth) {
+    public ResponseEntity<?> uploadRapport(@PathVariable Long id, @RequestParam("file") MultipartFile file, Authentication auth) {
         try {
-            String email = auth.getName();
-            stageService.deposerRapport(id, file.getOriginalFilename(), email);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Rapport déposé"));
+            // auth.getName() récupère automatiquement l'email du token JWT
+            stageService.deposerRapport(id, file, auth.getName());
+            return ResponseEntity.ok().body(Map.of("success", true, "message", "Rapport déposé"));
+        } catch (Exception e) {
+            e.printStackTrace(); // Affiche l'erreur exacte dans ta console Java
+            return ResponseEntity.badRequest().body("Erreur : " + e.getMessage());
+        }
+    }
+
+    // ROUTE 2 : Pour la LECTURE (Le professeur télécharge/lit)
+    @GetMapping("/rapports/{nomFichier}")
+    public ResponseEntity<Resource> lireRapport(@PathVariable String nomFichier) {
+        try {
+            Path filePath = Paths.get("uploads/rapports/").resolve(nomFichier).normalize();
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists()) {
+                return ResponseEntity.ok()
+                        // "inline" permet d'ouvrir le PDF dans le navigateur. Si tu mets "attachment", ça forcera le téléchargement.
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                        .header(HttpHeaders.CONTENT_TYPE, "application/pdf")
+                        .body(resource);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    // ENSEIGNANT : Évaluer un stage (Noter le rapport)
+    @PostMapping("/{id}/evaluer")
+    @PreAuthorize("hasRole('ENSEIGNANT')")
+    public ResponseEntity<?> evaluerStage(@PathVariable Long id, @RequestBody Map<String, Object> evaluation) {
+        try {
+            stageService.evaluerStage(id, evaluation);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Évaluation enregistrée"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
         }

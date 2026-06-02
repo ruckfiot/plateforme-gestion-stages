@@ -6,7 +6,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import org.springframework.web.multipart.MultipartFile;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.io.IOException;
 
 @Service
 @Transactional
@@ -53,7 +60,7 @@ public class StageService {
     
     // TUTEUR: Ses stages
     public List<Stage> getStagesByTuteur(Long idTuteur) {
-        return stageRepository.findByTuteurIdEnseignant(idTuteur);
+        return stageRepository.findByTuteur_IdEnseignant(idTuteur);
     }
     
     // APPRENANT: Ses stages
@@ -89,22 +96,41 @@ public class StageService {
         if (stage.getEtat() == null || stage.getEtat().isEmpty()) {
             stage.setEtat("EN_COURS");
         }
-        // Le "sujet" et "objectif" sont automatiquement sauvegardés ici par Spring Data JPA
         return stageRepository.save(stage);
     }
     
     // UPDATE stage complet (Admin)
     public Optional<Stage> updateStage(Long id, Stage details, Long idApprenant, Long idTuteur, Long idEntreprise) {
         return stageRepository.findById(id).map(stage -> {
-            // --- NOUVELLE LIGNE AJOUTÉE ICI ---
             stage.setSujet(details.getSujet()); 
-            // ----------------------------------
-            
             stage.setDateDebut(details.getDateDebut());
             stage.setDuree(details.getDuree());
             stage.setObjectif(details.getObjectif());
             stage.setEtat(details.getEtat() != null ? details.getEtat() : stage.getEtat());
+            
+            // Mise à jour de la date dans l'entité Stage
             stage.setDateSoutenance(details.getDateSoutenance());
+            stage.setDateLimiteRapport(details.getDateLimiteRapport());
+            
+            // --- CRÉATION OU MISE À JOUR DE LA TABLE SOUTENANCE ---
+            if (details.getDateSoutenance() != null || details.getSalleSoutenance() != null) {
+                Soutenance soutenance = soutenanceRepository.findAll().stream()
+                        .filter(s -> s.getStage() != null && s.getStage().getIdStage().equals(id))
+                        .findFirst()
+                        .orElse(new Soutenance());
+                
+                soutenance.setStage(stage);
+                // Si une date est fournie, on la convertit en LocalDateTime (en ajoutant 00:00:00)
+                if (details.getDateSoutenance() != null) {
+                    soutenance.setDateSoutenance(details.getDateSoutenance().atStartOfDay());
+                } else {
+                    soutenance.setDateSoutenance(null);
+                }
+                soutenance.setSalle(details.getSalleSoutenance());
+                
+                soutenanceRepository.save(soutenance);
+            }
+            // --------------------------------------------------------
             
             if (idApprenant != null) {
                 stage.setApprenant(apprenantRepository.findById(idApprenant).orElseThrow());
@@ -144,26 +170,47 @@ public class StageService {
         });
     }
     
-    // APPRENANT: Déposer rapport PDF
-    public void deposerRapport(Long idStage, String nomFichier, String emailApprenant) {
+    // Le dossier physique où seront stockés les PDF (il se créera à la racine de ton projet Java)
+    private final String UPLOAD_DIR = "uploads/rapports/";
+
+    // APPRENANT: Déposer rapport PDF (Physique + BDD)
+    public void deposerRapport(Long idStage, MultipartFile file, String emailApprenant) throws IOException {
         Long idApprenant = getApprenantIdByEmail(emailApprenant);
         
         Stage stage = stageRepository.findByIdWithRelations(idStage)
                 .orElseThrow(() -> new RuntimeException("Stage " + idStage + " non trouvé"));
         
-        // Vérification autorisation
         if (!stage.getApprenant().getIdApprenant().equals(idApprenant)) {
             throw new RuntimeException("Accès refusé au stage " + idStage);
         }
+
+        // 1. Création du dossier s'il n'existe pas
+        Path uploadPath = Paths.get(UPLOAD_DIR);
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
+
+        // 2. Génération d'un nom unique (Timestamp + Nom d'origine sans espaces)
+        String originalFileName = file.getOriginalFilename();
+        String uniqueFileName = System.currentTimeMillis() + "_" + originalFileName.replaceAll("\\s+", "_");
+        Path filePath = uploadPath.resolve(uniqueFileName);
+
+        // 3. Copie physique du fichier sur le disque dur
+        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
         
-        // Créer rapport via service 
-        Rapport rapport = new Rapport();
-        rapport.setNomFichier(nomFichier);
+        // 4. On met à jour le rapport existant, ou on en crée un nouveau
+        Rapport rapport;
+        if (stage.getRapports() != null && !stage.getRapports().isEmpty()) {
+            rapport = stage.getRapports().get(0); 
+        } else {
+            rapport = new Rapport();
+            rapport.setStage(stage);
+        }
+        
+        rapport.setNomFichier(uniqueFileName); 
         rapport.setDateDepot(LocalDate.now());
-        rapport.setStage(stage);
-        rapportService.createRapport(rapport);
+        rapportRepository.save(rapport); 
         
-        // Met à jour état stage
         stage.setEtat("RAPPORT_DEPOSE");
         stageRepository.save(stage);
     }
@@ -175,5 +222,56 @@ public class StageService {
             return true;
         }
         return false;
+    }
+    
+// ENSEIGNANT: Évaluer un stage (Notes + Commentaires Rapport & Soutenance)
+    public void evaluerStage(Long idStage, Map<String, Object> evaluation) {
+        Stage stage = stageRepository.findByIdWithRelations(idStage)
+                .orElseThrow(() -> new RuntimeException("Stage introuvable"));
+        
+        // ========================================================
+        // 2. GESTION DU RAPPORT ÉCRIT (Table 'rapport')
+        // ========================================================
+        if (stage.getRapports() != null && !stage.getRapports().isEmpty()) {
+            Rapport rapport = stage.getRapports().get(0);
+            
+            if (evaluation.containsKey("noteRapport") && evaluation.get("noteRapport") != null && !evaluation.get("noteRapport").toString().isEmpty()) {
+                rapport.setNoteRapport(Double.parseDouble(evaluation.get("noteRapport").toString()));
+            }
+            if (evaluation.containsKey("commentaire") && evaluation.get("commentaire") != null) {
+                rapport.setCommentaire(evaluation.get("commentaire").toString());
+            }
+            
+            rapport.setEtat("EVALUE");
+            rapportRepository.save(rapport);
+        }
+        
+        // ========================================================
+        // 3. GESTION DE LA SOUTENANCE ORALE (Table 'soutenance')
+        // ========================================================
+        if ((evaluation.containsKey("noteSoutenance") && evaluation.get("noteSoutenance") != null && !evaluation.get("noteSoutenance").toString().isEmpty()) || 
+            (evaluation.containsKey("commentaireSoutenance") && evaluation.get("commentaireSoutenance") != null)) {
+            
+            Soutenance soutenance = soutenanceRepository.findAll().stream()
+                    .filter(s -> s.getStage() != null && s.getStage().getIdStage().equals(idStage))
+                    .findFirst()
+                    .orElse(new Soutenance()); 
+            
+            if (evaluation.containsKey("noteSoutenance") && evaluation.get("noteSoutenance") != null && !evaluation.get("noteSoutenance").toString().isEmpty()) {
+                soutenance.setNoteSoutenance(Double.parseDouble(evaluation.get("noteSoutenance").toString()));
+            }
+            if (evaluation.containsKey("commentaireSoutenance") && evaluation.get("commentaireSoutenance") != null) {
+                soutenance.setCommentaireSoutenance(evaluation.get("commentaireSoutenance").toString());
+            }
+            
+            soutenance.setStage(stage);
+            soutenanceRepository.save(soutenance);
+        }
+        
+        // ========================================================
+        // 4. VALIDATION FINALE DU STAGE
+        // ========================================================
+        stage.setEtat("VALIDE");
+        stageRepository.save(stage);
     }
 }
