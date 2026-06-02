@@ -379,7 +379,7 @@ public class DataInitializer implements CommandLineRunner {
         s3.setDateDebut(LocalDate.of(2025, 1, 6));
         s3.setDuree("6 mois");
         s3.setObjectif("Mettre en place des dashboards de supervision avec Grafana");
-        s3.setEtat("EN_COURS");
+        s3.setEtat("TERMINE");
         s3.setApprenant(gaetan);
         s3.setEntreprise(capgemini);
         s3.setTuteur(nicolas);
