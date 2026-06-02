@@ -13,13 +13,11 @@ const Utilisateurs = () => {
   // --- ÉTATS DYNAMIQUES (VRAIE BDD) ---
   const [eleves, setEleves] = useState([]);
   const [profs, setProfs] = useState([]);
+  const [promotionsList, setPromotionsList] = useState([]); // <-- NOUVEAU
 
   // --- ÉTATS DES MODALES ---
   const [editModalData, setEditModalData] = useState(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-
-  // --- LISTE DES PROMOTIONS ---
-  const listePromos = ["E1", "E2", "E3a", "E3e", "E4a", "E4e", "E5a", "E5e"];
 
   const listeMatieres = [
     "Anglais", 
@@ -46,8 +44,11 @@ const Utilisateurs = () => {
     try {
       const apprenantsData = await utilisateurService.getApprenants();
       const enseignantsData = await utilisateurService.getEnseignants();
+      const promosData = await utilisateurService.getPromotions(); // <-- NOUVEAU
+      
       setEleves(apprenantsData);
       setProfs(enseignantsData);
+      setPromotionsList(promosData); // <-- NOUVEAU
     } catch (error) {
       console.error("Erreur lors de la récupération des utilisateurs", error);
     } finally {
@@ -68,20 +69,19 @@ const Utilisateurs = () => {
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     try {
-      // On prépare l'objet pour l'API /register
       const newUser = {
         nom: createFormData.nom,
         prenom: createFormData.prenom,
         email: createFormData.email,
-        motDePasse: createFormData.motDePasse, // Aligné avec ton authService
+        motDePasse: createFormData.motDePasse,
         role: createFormData.role
       };
 
       await authService.register(newUser);
       
-      fetchData(); // Rafraîchit le tableau
-      setIsCreateOpen(false); // Ferme la modale
-      setCreateFormData({ role: 'ROLE_APPRENANT', prenom: '', nom: '', email: '', motDePasse: '' });
+      fetchData(); 
+      setIsCreateOpen(false); 
+      setCreateFormData({ role: 'APPRENANT', prenom: '', nom: '', email: '', motDePasse: '' });
       
     } catch (err) {
       console.error("Erreur d'inscription :", err.response?.data || err);
@@ -95,7 +95,9 @@ const Utilisateurs = () => {
       const currentId = u.idApprenant || u.idEnseignant;
       const updatedUser = { ...u, statut: 'VALIDE' };
       if (tab === 'eleves') {
-        await utilisateurService.updateApprenant(currentId, updatedUser);
+        // <-- NOUVEAU : on transmet l'idPromotion actuel pour ne pas le perdre
+        const idPromoCurrent = u.promotion ? u.promotion.idPromotion : null;
+        await utilisateurService.updateApprenant(currentId, updatedUser, idPromoCurrent);
       } else {
         await utilisateurService.updateEnseignant(currentId, updatedUser);
       }
@@ -127,7 +129,12 @@ const Utilisateurs = () => {
     try {
       const currentId = editModalData.idApprenant || editModalData.idEnseignant;
       if (tab === 'eleves') {
-        await utilisateurService.updateApprenant(currentId, editModalData);
+        // <-- NOUVEAU : on extrait l'idPromotion du formulaire
+        const idPromoSelected = editModalData.idPromotion !== undefined 
+          ? editModalData.idPromotion 
+          : (editModalData.promotion ? editModalData.promotion.idPromotion : null);
+        
+        await utilisateurService.updateApprenant(currentId, editModalData, idPromoSelected);
       } else {
         await utilisateurService.updateEnseignant(currentId, editModalData);
       }
@@ -165,7 +172,7 @@ const Utilisateurs = () => {
       (u.prenomApprenant && u.prenomApprenant.toLowerCase().includes(lowerCaseQuery)) ||
       (u.nomEnseignant && u.nomEnseignant.toLowerCase().includes(lowerCaseQuery)) ||
       (u.prenomEnseignant && u.prenomEnseignant.toLowerCase().includes(lowerCaseQuery)) ||
-      (u.promo && u.promo.toLowerCase().includes(lowerCaseQuery)) ||
+      (u.promotion && u.promotion.nom && u.promotion.nom.toLowerCase().includes(lowerCaseQuery)) || // <-- NOUVEAU
       (u.matiere && u.matiere.toLowerCase().includes(lowerCaseQuery))
     );
   }
@@ -244,7 +251,12 @@ const Utilisateurs = () => {
                 return (
                   <tr key={currentId} style={{ borderBottom: '1px solid #444' }}>
                     <td style={{ padding: '15px 10px', color: '#ffffff' }}><b>{nomAffiche}</b> {prenomAffiche}</td>
-                    <td style={{ padding: '15px 10px', color: '#dddddd' }}>{u.promo || u.matiere || '-'}</td>
+                    
+                    {/* <-- NOUVEAU : Affichage dynamique de la promo ou de la matière --> */}
+                    <td style={{ padding: '15px 10px', color: '#dddddd' }}>
+                      {tab === 'eleves' ? (u.promotion ? u.promotion.nom : '-') : (u.matiere || '-')}
+                    </td>
+                    
                     <td style={{ padding: '15px 10px' }}>
                       <span style={{ 
                         padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold',
@@ -288,7 +300,6 @@ const Utilisateurs = () => {
             <h2 style={{ margin: '0 0 20px 0', color: '#fff' }}>Créer un Utilisateur</h2>
             <form onSubmit={handleCreateSubmit}>
               
-              <label style={labelStyle}>Type de compte</label>
               <label style={labelStyle}>Type de compte</label>
               <select 
                 required 
@@ -371,12 +382,18 @@ const Utilisateurs = () => {
 
               {tab === 'eleves' ? (
                 <>
-                  {/* ... (le menu déroulant des promos qu'on a fait avant) ... */}
                   <label style={labelStyle}>Promotion / Filière</label>
-                  <select style={inputStyle} value={editModalData.promo || ''} onChange={(e) => setEditModalData({...editModalData, promo: e.target.value})}>
+                  {/* <-- NOUVEAU : Boucle sur les données de la base --> */}
+                  <select 
+                    style={inputStyle} 
+                    value={editModalData.idPromotion !== undefined ? editModalData.idPromotion : (editModalData.promotion ? editModalData.promotion.idPromotion : '')} 
+                    onChange={(e) => setEditModalData({...editModalData, idPromotion: e.target.value})}
+                  >
                     <option value="">Sélectionner une promo...</option>
-                    {listePromos.map((promo, index) => (
-                      <option key={index} value={promo}>{promo}</option>
+                    {promotionsList.map((promo) => (
+                      <option key={promo.idPromotion} value={promo.idPromotion}>
+                        {promo.nom} ({promo.annee})
+                      </option>
                     ))}
                   </select>
                 </>

@@ -4,8 +4,9 @@ import com.projet.gestion_stages.model.Apprenant;
 import com.projet.gestion_stages.service.ApprenantService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
+import java.util.Optional;
 import java.util.List;
 
 @RestController
@@ -23,17 +24,24 @@ public class ApprenantController {
         return ResponseEntity.ok(apprenantService.getAllApprenants());
     }
 
-    @PostMapping
-    public ResponseEntity<Apprenant> addApprenant(@RequestBody Apprenant apprenant) {
-        Apprenant newApprenant = apprenantService.createApprenant(apprenant);
-        return new ResponseEntity<>(newApprenant, HttpStatus.CREATED);
+@PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Apprenant> createApprenant(
+            @RequestBody Apprenant apprenant, 
+            @RequestParam(required = false) Long idPromotion) { // Ajouter ça
+        Apprenant created = apprenantService.createApprenant(apprenant, idPromotion);
+        return ResponseEntity.ok(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Apprenant> updateApprenant(@PathVariable Long id, @RequestBody Apprenant apprenantDetails) {
-        return apprenantService.updateApprenant(id, apprenantDetails)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateApprenant(
+            @PathVariable Long id, 
+            @RequestBody Apprenant details, 
+            @RequestParam(required = false) Long idPromotion) { // Ajouter ça
+        
+        Optional<Apprenant> updated = apprenantService.updateApprenant(id, details, idPromotion);
+        return updated.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")

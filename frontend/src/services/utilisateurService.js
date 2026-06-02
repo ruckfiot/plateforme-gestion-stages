@@ -1,4 +1,6 @@
 import api from './api';
+import axios from 'axios';
+const API_URL = 'http://localhost:8080/api';
 
 // --- APPRENANTS (Élèves) ---
 const getApprenants = async () => {
@@ -32,9 +34,21 @@ const deleteEnseignant = async (id) => {
   return response.data;
 };
 
+const getPromotions = async () => {
+  const user = JSON.parse(localStorage.getItem('user'));
+  const response = await axios.get(`${API_URL}/promotions`, {
+    headers: {
+      'Authorization': `Bearer ${user?.token}`
+    }
+  });
+  return response.data;
+};
+
+
 const utilisateurService = {
   getApprenants, updateApprenant, deleteApprenant,
-  getEnseignants, updateEnseignant, deleteEnseignant
+  getEnseignants, updateEnseignant, deleteEnseignant,
+  getPromotions
 };
 
 export default utilisateurService;
