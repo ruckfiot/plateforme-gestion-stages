@@ -2,8 +2,6 @@ package com.projet.gestion_stages.controller;
 
 import com.projet.gestion_stages.model.Stage;
 import com.projet.gestion_stages.service.*;
-
-// --- LES IMPORTS CORRIGÉS ---
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -15,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 // -----------------------------
@@ -180,4 +179,14 @@ public class StageController {
             return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
         }
     }
+    @DeleteMapping("/{id}/rapport")
+    public ResponseEntity<?> supprimerRapport(@PathVariable Long id, Principal principal) {
+        try {
+            stageService.supprimerRapport(id, principal.getName());
+            return ResponseEntity.ok("Rapport supprimé avec succès.");
+    } catch (Exception e) {
+        return ResponseEntity.badRequest().body(e.getMessage());
+    }
+}
+
 }
