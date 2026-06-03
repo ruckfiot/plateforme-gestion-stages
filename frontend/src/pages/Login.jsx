@@ -31,7 +31,6 @@ const Login = () => {
     try {
       const userData = await authService.login(email, password);
       
-      // Optionnel : Si ton backend renvoie le statut et qu'il est EN_ATTENTE
       if (userData.statut === 'EN_ATTENTE') {
           setView('pending-login');
           authService.logout(); // On le déconnecte par sécurité
@@ -55,7 +54,7 @@ const Login = () => {
 
     try {
       // On envoie la demande avec le rôle par défaut 'APPRENANT'
-      await authService.register(nom, prenom, email, password, "APPRENANT");
+      await authService.register({ nom, prenom, email, motDePasse: password, role: "APPRENANT" });
       setView('pending-request'); 
     } catch (err) {
       setError(err.response?.data || "Erreur lors de l'inscription. L'email est peut-être déjà utilisé.");
