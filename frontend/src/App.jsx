@@ -9,6 +9,7 @@ import Evaluations from './pages/Evaluations';
 
 function App() {
   return (
+    // CONTEXTE ROUTAGE : BrowserRouter fournit l'historique de navigation HTML5 à l'ensemble des composants enfants
     <BrowserRouter>
       <Routes>
         {/* Route Publique */}

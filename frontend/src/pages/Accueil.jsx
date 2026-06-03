@@ -14,8 +14,7 @@ const Accueil = () => {
   const [monStage, setMonStage] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // --- NOUVEAUX ÉTATS POUR LE BACKEND ---
-  // On prépare des "boîtes" pour stocker les vraies données issues de la base de données
+  // !!! ARCHITECTURE : États locaux centralisant les données analytiques calculées à partir de l'API
   const [adminStats, setAdminStats] = useState({ stages: 0, entreprises: 0, utilisateurs: 0, attente: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -24,14 +23,14 @@ const Accueil = () => {
     navigate('/');
   };
 
-  // --- SÉLECTEUR DE TEST (À GARDER POUR TES TESTS FRONTS) ---
+  // --- SÉLECTEUR DE TEST (n'est plus utilisé) ---
   const switchRole = (newRole) => {
     const updatedUser = { ...user, role: newRole };
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
-  // --- CONNEXION AU BACKEND (RÉCUPÉRATION DES DONNÉES) ---
+  // !!! REQUÊTES ASYNCHRONES : Chargement conditionnel des données selon le rôle de l'utilisateur extrait du token
   useEffect(() => {
     const fetchDashboardData = async () => {
     setLoading(true);
@@ -44,7 +43,7 @@ const Accueil = () => {
         const apprenantsDb = await utilisateurService.getApprenants();
         const profsDb = await utilisateurService.getEnseignants();
         
-        // On compte automatiquement ceux qui sont "EN_ATTENTE (apprenants + profs = total)
+        // !!! LOGIQUE FILTRAGE : Agrégation dynamique des comptes apprenants et tuteurs bloqués en 'EN_ATTENTE'
         const nbAttente = apprenantsDb.filter(a => a.statut === 'EN_ATTENTE').length + profsDb.filter(p => p.statut === 'EN_ATTENTE').length;;
 
         setAdminStats({
@@ -59,6 +58,7 @@ const Accueil = () => {
           const mesStages = await stageService.getStagesByTuteur();
           setNbEtudiants(mesStages.length);
           
+          // CONDITION STRATEGIQUE : Filtre les livrables déposés par l'étudiant qui n'ont pas encore reçu de note finale
           // COMPTEUR STRICT : Uniquement s'il y a un document physique ET qu'il manque une note
           const rapportsEnAttente = mesStages.filter(stage => {
             const aUnRapport = stage.rapports && stage.rapports.length > 0;
@@ -97,6 +97,7 @@ const Accueil = () => {
     fetchDashboardData();
   }, [user?.role]); // Se déclenche quand le composant charge ou que le rôle change
 
+// !!! PARSING DE DATE : Découpage des chaînes ISO (LocalDateTime) pour un affichage propre au format français JJ/MM/AAAA
 const getMessageActualite = () => {
     // Si l'élève n'a pas de stage, on affiche un message de base
     if (!monStage) {
@@ -277,6 +278,7 @@ const getMessageActualite = () => {
   );
 
   // --- RENDU : ADMIN ---
+  // DIVISION DES VUES : Rendu conditionnel restrictif garantissant le cloisonnement des interfaces selon le privilège
   const renderAdminDashboard = () => {
     return (
       <div>

@@ -9,6 +9,7 @@ const ROLE_LABELS = {
   APPRENANT:  'Apprenant',
 };
 
+// ERGONOMIE : Composant "Slide-over" (volet latéral) évitant une rupture ou un rechargement de la page courante
 export default function SettingsPanel({ isOpen, onClose }) {
   const [ancienMdp,       setAncienMdp]       = useState('');
   const [newPassword,     setNewPassword]     = useState('');
@@ -17,10 +18,10 @@ export default function SettingsPanel({ isOpen, onClose }) {
   const [loading,         setLoading]         = useState(false);
 
   const navigate = useNavigate();
-  const panelRef = useRef(null);
+  const panelRef = useRef(null);  // DOM REF : Référence au nœud HTML pour intercepter la zone de clic
   const user     = authService.getCurrentUser();
 
-  // Fermer en cliquant dehors
+  // CLIC EXTÉRIEUR : Ferme le volet si l'événement se produit en dehors de la zone ciblée par panelRef
   useEffect(() => {
     const handleClick = (e) => {
       if (isOpen && panelRef.current && !panelRef.current.contains(e.target)) {
@@ -28,10 +29,10 @@ export default function SettingsPanel({ isOpen, onClose }) {
       }
     };
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);  // NETTOYAGE : Évite les fuites de mémoire à la destruction du composant
   }, [isOpen, onClose]);
 
-  // Fermer avec Échap
+  // TOUCHE ÉCHAP : Amélioration UX classique permettant la fermeture rapide via le clavier
   useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleKey);
@@ -44,6 +45,7 @@ export default function SettingsPanel({ isOpen, onClose }) {
     navigate('/');
   };
 
+  // VALIDATION CLIENT : Vérifications locales (longueur, correspondance) réduisant la charge de requêtes sur l'API
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
     setMessage(null);
@@ -60,6 +62,7 @@ export default function SettingsPanel({ isOpen, onClose }) {
       return;
     }
 
+    // APPEL API SÉCURISÉ : Transmission des paramètres à la route backend dédiée au chiffrement BCrypt
     try {
       await api.put('/auth/change-password', {
         email: user.email,

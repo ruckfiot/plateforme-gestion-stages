@@ -6,14 +6,14 @@ import { useNavigate } from 'react-router-dom';
 const Utilisateurs = () => {
   const navigate = useNavigate();
   const user = authService.getCurrentUser();
-  const [tab, setTab] = useState('eleves');
+  const [tab, setTab] = useState('eleves');   // INTERFACE : État basculant l'affichage entre le panneau des Apprenants et celui des Enseignants
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
   // --- ÉTATS DYNAMIQUES (VRAIE BDD) ---
   const [eleves, setEleves] = useState([]);
   const [profs, setProfs] = useState([]);
-  const [promotionsList, setPromotionsList] = useState([]); // <-- NOUVEAU
+  const [promotionsList, setPromotionsList] = useState([]);
 
   // --- ÉTATS DES MODALES ---
   const [editModalData, setEditModalData] = useState(null);
@@ -39,16 +39,17 @@ const Utilisateurs = () => {
   });
 
   // --- CHARGEMENT DES DONNÉES ---
+  // AGRÉGATION PAR PARALLÉLISME : Récupère simultanément les collections métiers et académiques de la base de données
   const fetchData = async () => {
     setLoading(true);
     try {
       const apprenantsData = await utilisateurService.getApprenants();
       const enseignantsData = await utilisateurService.getEnseignants();
-      const promosData = await utilisateurService.getPromotions(); // <-- NOUVEAU
+      const promosData = await utilisateurService.getPromotions();
       
       setEleves(apprenantsData);
       setProfs(enseignantsData);
-      setPromotionsList(promosData); // <-- NOUVEAU
+      setPromotionsList(promosData);
     } catch (error) {
       console.error("Erreur lors de la récupération des utilisateurs", error);
     } finally {
@@ -90,13 +91,14 @@ const Utilisateurs = () => {
   };
 
   // --- ACTIONS DE VALIDATION RAPIDE ---
+  // MODIFICATION DE STATUT VIA L'API : Force le statut à 'VALIDE' tout en conservant la promotion de l'élève pour le backend
   const validerCompte = async (u) => {
     try {
       const currentId = u.idApprenant || u.idEnseignant;
       const updatedUser = { ...u, statut: 'VALIDE' };
       if (tab === 'eleves') {
-        // <-- NOUVEAU : on transmet l'idPromotion actuel pour ne pas le perdre
-        const idPromoCurrent = u.promotion ? u.promotion.idPromotion : null;
+        // on transmet l'idPromotion actuel pour ne pas le perdre
+        const idPromoCurrent = u.promotion ? u.promotion.idPromotion : null;  // SÉCURITÉ CONFLIT DE MERGE : Conserve la promotion existante lors d'une approbation de compte
         await utilisateurService.updateApprenant(currentId, updatedUser, idPromoCurrent);
       } else {
         await utilisateurService.updateEnseignant(currentId, updatedUser);
@@ -124,15 +126,16 @@ const Utilisateurs = () => {
   };
 
   // --- ACTIONS DE MODIFICATION (MODALE GÉRER) ---
+  // REQUÊTE COMPOSITE PAR APPRENANT : Récupère et transmet l'ID de promotion explicitement sélectionné dans le formulaire
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
       const currentId = editModalData.idApprenant || editModalData.idEnseignant;
       if (tab === 'eleves') {
-        // <-- NOUVEAU : on extrait l'idPromotion du formulaire
+        // on extrait l'idPromotion du formulaire
         const idPromoSelected = editModalData.idPromotion !== undefined 
           ? editModalData.idPromotion 
-          : (editModalData.promotion ? editModalData.promotion.idPromotion : null);
+          : (editModalData.promotion ? editModalData.promotion.idPromotion : null);   // SÉCURISATION PROMOTION : Évite d'envoyer une valeur nulle lors d'une mise à jour de compte apprenant
         
         await utilisateurService.updateApprenant(currentId, editModalData, idPromoSelected);
       } else {
@@ -162,9 +165,11 @@ const Utilisateurs = () => {
   };
 
   // --- LOGIQUE DE RECHERCHE ---
+  // COMMUTATION DU JEU DE DONNÉES : Aligne la source de données à filtrer sur l'onglet actif sélectionné par l'administrateur
   const listToFilter = tab === 'eleves' ? eleves : profs;
   let filteredList = listToFilter;
 
+  // MOTEUR DE TRACABILITÉ LOCAL : Filtrage multicritère (Nom, Prénom, Promotion, Matière) s'exécutant entièrement côté client
   if (searchQuery) {
     const lowerCaseQuery = searchQuery.toLowerCase();
     filteredList = listToFilter.filter(u => 
@@ -172,7 +177,7 @@ const Utilisateurs = () => {
       (u.prenomApprenant && u.prenomApprenant.toLowerCase().includes(lowerCaseQuery)) ||
       (u.nomEnseignant && u.nomEnseignant.toLowerCase().includes(lowerCaseQuery)) ||
       (u.prenomEnseignant && u.prenomEnseignant.toLowerCase().includes(lowerCaseQuery)) ||
-      (u.promotion && u.promotion.nom && u.promotion.nom.toLowerCase().includes(lowerCaseQuery)) || // <-- NOUVEAU
+      (u.promotion && u.promotion.nom && u.promotion.nom.toLowerCase().includes(lowerCaseQuery)) || 
       (u.matiere && u.matiere.toLowerCase().includes(lowerCaseQuery))
     );
   }
@@ -252,7 +257,7 @@ const Utilisateurs = () => {
                   <tr key={currentId} style={{ borderBottom: '1px solid #444' }}>
                     <td style={{ padding: '15px 10px', color: '#ffffff' }}><b>{nomAffiche}</b> {prenomAffiche}</td>
                     
-                    {/* <-- NOUVEAU : Affichage dynamique de la promo ou de la matière --> */}
+                    {/* <-- Affichage dynamique de la promo ou de la matière --> */}
                     <td style={{ padding: '15px 10px', color: '#dddddd' }}>
                       {tab === 'eleves' ? (u.promotion ? u.promotion.nom : '-') : (u.matiere || '-')}
                     </td>
@@ -383,7 +388,7 @@ const Utilisateurs = () => {
               {tab === 'eleves' ? (
                 <>
                   <label style={labelStyle}>Promotion / Filière</label>
-                  {/* <-- NOUVEAU : Boucle sur les données de la base --> */}
+                  {/* <--  Boucle sur les données de la base --> */}
                   <select 
                     style={inputStyle} 
                     value={editModalData.idPromotion !== undefined ? editModalData.idPromotion : (editModalData.promotion ? editModalData.promotion.idPromotion : '')} 

@@ -18,6 +18,7 @@ const Stages = () => {
   const [dateSoutenance, setDateSoutenance] = useState('');
   const [salleSoutenance, setSalleSoutenance] = useState('');
 
+  // REQUÊTES RETREIVAL : Isolation et cloisonnement des requêtes de données selon les privilèges du rôle connecté
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -73,6 +74,7 @@ const Stages = () => {
     dateLimiteRapport: ''
   });
 
+  // ACTION DE CRÉATION : Envoie le payload métier et lie l'étudiant, le tuteur et l'entreprise via l'API Spring Boot
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -81,7 +83,7 @@ const Stages = () => {
         objectif: createFormData.objectifs,
         dateDebut: createFormData.dateDebut,
         duree: createFormData.duree,
-        etat: 'EN_COURS',
+        etat: 'EN_COURS',   // INITIALISATION : Fixe l'état par défaut à la création sans écraser les futures modifications
         dateLimiteRapport: createFormData.dateLimiteRapport || null
       };
 
@@ -100,6 +102,7 @@ const Stages = () => {
     }
   };
 
+  // HYDRATION MODALE : Extrait l'objet imbriqué de la ligne sélectionnée pour alimenter les états de modification
   const openEditModal = (stage) => {
     setEditModalData(stage);
     const laSoutenance = stage.soutenances && stage.soutenances.length > 0 ? stage.soutenances[0] : null;
@@ -107,6 +110,7 @@ const Stages = () => {
     setSalleSoutenance(laSoutenance?.salle || '');
   };
 
+  // MUTATION COMPOSITE : Met à jour la fiche de stage globale ainsi que les informations de planification associées
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -121,7 +125,7 @@ const Stages = () => {
         dateDebut: editModalData.dateDebut,
         duree: editModalData.duree,
         objectif: editModalData.objectif,
-        etat: editModalData.etat,
+        etat: editModalData.etat,    // PERSISTANCE ÉTAT : Renvoie le statut modifié (ex: TERMINE) pour éviter qu'il ne soit écrasé par le serveur
         dateSoutenance: dateSoutenance || null, 
         salleSoutenance: salleSoutenance || null,
         dateLimiteRapport: editModalData.dateLimiteRapport || null
@@ -148,7 +152,8 @@ const Stages = () => {
     }
   };
 
-  // --- NOUVEAUTÉ : FONCTION POUR OUVRIR LE PDF ---
+  // --- FONCTION POUR OUVRIR LE PDF ---
+  // FLUX DE FICHIERS : Télécharge le rapport sous forme de Blob binaire et l'ouvre proprement dans un nouvel onglet
   const ouvrirPDF = async (nomFichier) => {
     try {
       const blob = await stageService.lireRapport(nomFichier);
@@ -160,6 +165,7 @@ const Stages = () => {
     }
   };
 
+// UPLOAD MULTIPART : Valide la taille côté client (Max 20Mo) et transmet le fichier binaire au serveur
 const handleUploadRapport = async (e) => {
     e.preventDefault();
     if (!selectedFile) {
@@ -175,7 +181,7 @@ const handleUploadRapport = async (e) => {
 
     try {
       const id = viewModalData.idStage || viewModalData.id;
-      // L'appel est plus propre, plus besoin d'envoyer user.email !
+      // plus besoin d'envoyer user.email
       await stageService.deposerRapport(id, selectedFile);
       alert("Rapport déposé avec succès !");
       
@@ -183,7 +189,7 @@ const handleUploadRapport = async (e) => {
       setSelectedFile(null);
       fetchData(); 
     } catch (error) {
-      // Magie : Si Java renvoie une erreur 400, on l'affiche directement à l'écran !
+      // Si Java renvoie une erreur 400, on l'affiche directement à l'écran 
       const messageErreur = error.response?.data ? JSON.stringify(error.response.data) : "Erreur inconnue";
       alert("Une erreur est survenue lors du dépôt : " + messageErreur);
     }
@@ -198,6 +204,7 @@ const handleUploadRapport = async (e) => {
     titrePage = "Mes Stages";
   }
 
+  // FILTRAGE CROISÉ : Moteur de recherche local filtrant simultanément sur le sujet, l'entreprise, l'élève ou le tuteur
   if (searchQuery) {
     const lowerCaseQuery = searchQuery.toLowerCase();
     displayedStages = displayedStages.filter(stage => {
@@ -211,16 +218,18 @@ const handleUploadRapport = async (e) => {
     });
   }
 
+  // ALGORITHME GRAPHIQUE BADGES : Calcule l'affichage visuel en priorisant la valeur de la BDD sur l'état des livrables
   const renderStatut = (stage) => {
     // On met en majuscule par sécurité pour éviter les bugs de casse
     const etatActuel = (stage.etat || 'EN_ATTENTE').toUpperCase();
 
-    // 1. NOUVEAUTÉ : On détecte ton état "TERMINE"
+    // On détecte l'état "TERMINE"
+    // CORRECTIF RE-RENDU : Détecte directement TERMINE/VALIDE pour empêcher l'écrasement visuel s'il manque des notes
     if (etatActuel === 'TERMINE' || etatActuel === 'VALIDE') {
       return <span style={{ backgroundColor: '#27ae60', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>TERMINÉ</span>;
     }
 
-    // 2. Logique automatique (selon les notes / rapports déposés)
+    // Logique automatique (selon les notes / rapports déposés)
     const aUnRapport = stage.rapports && stage.rapports.length > 0;
     const aUneSoutenance = stage.soutenances && stage.soutenances.length > 0;
     const noteRapport = aUnRapport ? stage.rapports[0].noteRapport : null;
@@ -235,13 +244,13 @@ const handleUploadRapport = async (e) => {
       return <span style={{ backgroundColor: '#e67e22', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap'  }}>{texte}</span>;
     }
 
-    // 3. Détection de l'attente
+    // Détection de l'attente
     if (etatActuel === 'EN_ATTENTE') {
       return <span style={{ backgroundColor: '#d35400', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>EN ATTENTE</span>;
     }
     let bgColor = '#3498db';
     let texteAffiche = 'EN COURS';
-    // 4. Par défaut, pour tout le reste (et donc ton "EN_COURS")
+    // Par défaut, pour tout le reste (et donc ton "EN_COURS")
     return (
       <span style={{ backgroundColor: '#2980b9', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
         EN COURS

@@ -8,10 +8,10 @@ const api = axios.create({
 // L'intercepteur : le "Vigile de sortie"
 api.interceptors.request.use(
   (config) => {
-    // 1. On va chercher les infos de l'utilisateur dans le navigateur
+    // On va chercher les infos de l'utilisateur dans le navigateur
     const user = JSON.parse(localStorage.getItem('user'));
     
-    // 2. Si on a trouvé un token, on l'accroche à la requête !
+    // Si on a trouvé un token, on l'accroche à la requête !
     if (user && user.token) {
       config.headers.Authorization = `Bearer ${user.token}`;
     }

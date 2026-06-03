@@ -42,6 +42,7 @@ const Entreprises = () => {
   }, []);
 
   // --- ACTIONS VERS LE BACKEND ---
+  // COMMUTER D'ÉTAT : Réinitialise proprement les champs du formulaire après une création réussie
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -66,6 +67,7 @@ const Entreprises = () => {
     }
   };
 
+  // !!! REQUÊTE CLIENT : Chargement de la liste globale des partenaires via le service Axios dédié
   const handleDelete = async (idEntreprise) => {
     if (window.confirm("Supprimer cette entreprise ? Cela pourrait impacter les stages liés.")) {
       try {
@@ -79,6 +81,7 @@ const Entreprises = () => {
   };
 
   // --- LOGIQUE DE RECHERCHE ---
+  // RECHERCHE DYNAMIQUE : Filtrage en temps réel côté client sans aucune requête SQL supplémentaire (optimisation réseau)
   let displayedEntreprises = entreprises;
   if (searchQuery) {
     const lowerCaseQuery = searchQuery.toLowerCase();

@@ -8,6 +8,7 @@ const getApprenants = async () => {
   return response.data;
 };
 
+// REQUÊTE MIXTE BDD : Combine l'objet JSON (corps) et un paramètre d'URL (?idPromotion) requis pour la jointure Hibernate
 const updateApprenant = async (id, data, idPromotion) => {
   const config = {};
 
@@ -46,6 +47,7 @@ const deleteEnseignant = async (id) => {
 };
 
 // --- PROMOTIONS ---
+// BYPASS INTERCEPTOR : Utilise une instance Axios brute pour récupérer les métadonnées de promotions en injectant manuellement le token JWT
 const getPromotions = async () => {
   const user = JSON.parse(localStorage.getItem('user'));
   const response = await axios.get(`${API_URL}/promotions`, {

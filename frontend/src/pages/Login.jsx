@@ -4,6 +4,7 @@ import authService from '../services/authService';
 
 const Login = () => {
   // Les différentes vues : 'login', 'register', 'pending-request', 'pending-login'
+  // MACHINE À ÉTATS UI : Gestionnaire de sous-vues évitant de rediriger vers des fichiers externes lors du tunnel d'inscription
   const [view, setView] = useState('login'); 
 
   // ÉTATS DES FORMULAIRES
@@ -17,6 +18,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   // --- LOGIQUE DE CONNEXION ---
+  // AUTHENTIFICATION & FLUX : Intercepte le payload JSON retourné par Spring Boot et valide le privilège de connexion
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -31,6 +33,7 @@ const Login = () => {
     try {
       const userData = await authService.login(email, password);
       
+      // !!! BARRIÈRE SÉCURITÉ : Bloque l'accès client et purge les jetons si le compte a un statut 'EN_ATTENTE' en base de données
       if (userData.statut === 'EN_ATTENTE') {
           setView('pending-login');
           authService.logout(); // On le déconnecte par sécurité
@@ -47,6 +50,7 @@ const Login = () => {
   };
 
   // --- LOGIQUE D'INSCRIPTION BRANCHÉE AU BACKEND ---
+  // INSCRIPTION MÉTIER : Envoie la requête d'inscription avec le rôle restreint 'APPRENANT' par défaut pour des raisons de sécurité de l'API
   const handleRegister = async (e) => {
     e.preventDefault();
     setError('');

@@ -1,6 +1,7 @@
 import api from './api';
 import axios from 'axios';
 
+// API_URL GLOBALE : Utilisée spécifiquement pour les requêtes de fichiers binaires bruts contournant l'instance interceptée
 const API_URL = 'http://localhost:8080/api/stages';
 
 const getAllStages = async () => {
@@ -8,6 +9,7 @@ const getAllStages = async () => {
   return response.data;
 };
 
+// PARAMÈTRES REQUÊTE : Associe la structure métier aux identifiants via des query params exigés par le contrôleur Java
 const createStage = async (stageData, idApprenant, idTuteur, idEntreprise) => {
   const response = await api.post('/stages', stageData, {
     params: { idApprenant, idTuteur, idEntreprise }
@@ -27,11 +29,12 @@ const deleteStage = async (id) => {
   return response.data;
 };
 
+// INJECTION REQUÊTE : Extrait manuellement le Bearer token du stockage pour isoler les stages rattachés à ce tuteur
 const getStagesByTuteur = async () => {
-  // 1. On récupère le profil stocké lors de la connexion
+  // On récupère le profil stocké lors de la connexion
   const user = JSON.parse(localStorage.getItem('user'));
   
-  // 2. On utilise 'api' (qui connaît déjà l'URL de base) et on ajoute le token
+  // On utilise 'api' (qui connaît déjà l'URL de base) et on ajoute le token
   const response = await api.get('/stages/tuteur', {
     headers: {
       'Authorization': `Bearer ${user?.token}`
@@ -53,6 +56,7 @@ const getStagesByApprenant = async () => {
 };
 
 // UPLOAD AVEC FORMDATA
+// MULTIPART FORMDATA : Encapsule l'objet binaire du fichier physique et laisse Axios configurer le Content-Type boundary
 const deposerRapport = async (idStage, fichierPhysical) => {
     const formData = new FormData();
     formData.append('file', fichierPhysical); 
@@ -67,12 +71,12 @@ const deposerRapport = async (idStage, fichierPhysical) => {
     });
 };
 
-// DOWNLOAD AVEC BLOB (Pour ouvrir le PDF)
+// BLOB STREAMING : Force Axios à traiter la réponse sous forme de données binaires pour éviter d'altérer le fichier PDF encodé
 const lireRapport = async (nomFichier) => {
     const user = JSON.parse(localStorage.getItem('user'));
 
     const response = await axios.get(`${API_URL}/rapports/${nomFichier}`, {
-        responseType: 'blob', // CRUCIAL : On dit à React que ce n'est pas du texte, mais un fichier binaire
+        responseType: 'blob', // On dit à React que ce n'est pas du texte, mais un fichier binaire
         headers: {
             'Authorization': `Bearer ${user?.token}` // Ajout de la sécurité
         }
@@ -80,6 +84,7 @@ const lireRapport = async (nomFichier) => {
     return response.data;
 };
 
+// PERSISTANCE ÉVALUATION : Transmet la note et le commentaire au backend en s'authentifiant via les en-têtes HTTP
 const evaluerStage = async (idStage, evaluationData) => {
   const user = JSON.parse(localStorage.getItem('user'));
   const response = await api.post(`/stages/${idStage}/evaluer`, evaluationData, {

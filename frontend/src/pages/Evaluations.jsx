@@ -7,7 +7,7 @@ import soutenanceService from '../services/soutenanceService';
 const Evaluations = () => {
   const navigate = useNavigate();
   const user = authService.getCurrentUser();
-  const [searchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();   // PARAMÈTRES URL : Récupère l'ID du stage passé en paramètre de requête (?id=...)
   
   const stageIdParam = searchParams.get('id');
 
@@ -27,6 +27,7 @@ const Evaluations = () => {
     navigate('/');
   };
 
+  // SYNCHRONISATION : Extrait le stage ciblé et pré-remplit les formulaires avec les notes existantes en BDD
   useEffect(() => {
     const fetchDonnees = async () => {
       setLoading(true);
@@ -65,6 +66,7 @@ const Evaluations = () => {
   }, [stageIdParam]);
 
   //  FONCTION POUR OUVRIR LE PDF
+  //  FLUX BINAIRE : Télécharge le fichier PDF depuis le serveur sous forme de Blob et l'affiche dans un nouvel onglet
   const ouvrirPDF = async (nomFichier) => {
     try {
       const blob = await stageService.lireRapport(nomFichier);
@@ -76,6 +78,7 @@ const Evaluations = () => {
     }
   };
 
+  // !!! DOUBLE PERSISTANCE : Envoie les requêtes HTTP de notation en parallèle vers deux services d'API distincts (Stage et Soutenance)
   const handleEnregistrerNotes = async () => {
     try {
       setSaving(true);
@@ -135,7 +138,7 @@ const Evaluations = () => {
             <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#2ecc7115', border: '1px dashed #2ecc71', borderRadius: '5px' }}>
               <span style={{ color: '#2ecc71', fontSize: '13px', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Document à évaluer :</span>
               
-              {/* NOUVEAUTÉ : Bouton cliquable pour ouvrir le PDF au lieu d'un simple lien a href */}
+              {/* Bouton cliquable pour ouvrir le PDF au lieu d'un simple lien a href */}
               <span 
                 onClick={() => ouvrirPDF(stageSelectionne.rapports[0].nomFichier)} 
                 style={{ color: '#fff', textDecoration: 'underline', cursor: 'pointer' }}>
