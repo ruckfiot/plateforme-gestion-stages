@@ -5,6 +5,7 @@ import lombok.Data;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+// ENTITÉ JPA : Marque cette classe comme une table dans votre base de données MySQL
 @Entity
 @Data
 public class Administrateur {

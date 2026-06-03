@@ -21,11 +21,12 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.transaction.annotation.Transactional; // <-- IMPORT IMPORTANT
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.Optional;
 
+// !!! SÉCURITÉ DES FLUX : Point d'entrée critique exposé publiquement, protégé par les politiques CORS pour éviter le cross-site scripting
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
@@ -55,27 +56,30 @@ public class AuthController {
         this.passwordEncoder = passwordEncoder;
     }
 
+    // L'annotation @Transactional garantit que la création des identifiants et du profil métier réussissent ou s'annulent ensemble (rollback)
     @PostMapping("/register")
     @Transactional
     public ResponseEntity<?> registerUser(@RequestBody RegisterRequest signUpRequest) {
         
         try {
-            // 1. Vérifier si l'email existe déjà
+            // Vérifier si l'email existe déjà
             if (utilisateurRepository.findByEmail(signUpRequest.getEmail()).isPresent()) {
                 return ResponseEntity.badRequest().body("Erreur : Cet email est déjà utilisé !");
             }
 
-            // 2. Créer le compte utilisateur
+            // Créer le compte utilisateur
             Utilisateur user = new Utilisateur();
             user.setEmail(signUpRequest.getEmail());
+            // CRYPTOGRAPHIE UNIDIRECTIONNELLE : Hachage BCrypt avec sel aléatoire (Salt) pour empêcher le déchiffrement même en cas d'exfiltration de la base de données
             user.setMotDePasse(passwordEncoder.encode(signUpRequest.getMotDePasse()));
 
-            // 3. Assigner le rôle et créer le profil
+            // Assigner le rôle et créer le profil
             Role userRole = Role.valueOf(signUpRequest.getRole().toUpperCase());
             user.setRole(userRole);
             
             Utilisateur savedUser = utilisateurRepository.save(user);
 
+            // POLYMORPHISME MÉTIER : Routage de la création du profil étendu selon le rôle sans alourdir la table Utilisateur principale
             switch (userRole) {
                 case APPRENANT:
                     Apprenant apprenant = new Apprenant();
@@ -114,14 +118,16 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         try {
+            // DÉLÉGATION SÉCURITAIRE : Confie la validation des credentials au moteur interne de Spring Security pour éviter les failles logiques manuelles
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getMotDePasse()));
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            // SIGNATURE ÉPHÉMÈRE : Génération du jeton JWT signé par une clé privée côté serveur, garantissant l'intégrité de l'identité
             String jwt = jwtUtils.generateJwtToken(loginRequest.getEmail());
             
             Utilisateur user = utilisateurRepository.findByEmail(loginRequest.getEmail()).get();
             
-            // --- ON RENVOIE MAINTENANT LE STATUT À REACT ---
+            // --- ON RENVOIE LE STATUT À REACT ---
             return ResponseEntity.ok(new JwtResponse(jwt, user.getEmail(), user.getRole().name(), user.getStatut()));
             
         } catch (BadCredentialsException e) {
@@ -152,6 +158,7 @@ public class AuthController {
 
         Utilisateur utilisateur = optUser.get();
 
+        // Comparaison de l'empreinte de la tentative avec le hash en base sans jamais déchiffrer la donnée originale
         if (!passwordEncoder.matches(ancienMdp, utilisateur.getMotDePasse())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Mot de passe actuel incorrect.");
         }

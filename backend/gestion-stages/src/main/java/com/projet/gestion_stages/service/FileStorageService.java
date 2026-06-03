@@ -13,11 +13,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 
+// Gère le stockage physique des fichiers sur le serveur (Filesystem)
 @Service
 public class FileStorageService {
 
     private final Path root;
 
+    // Crée automatiquement le répertoire de stockage au démarrage si inexistant
     public FileStorageService(@Value("${file.upload-dir}") String uploadDir) {
         this.root = Paths.get(uploadDir);
         try {
@@ -27,6 +29,7 @@ public class FileStorageService {
         }
     }
 
+    // Sauvegarde le fichier avec un identifiant unique (UUID) pour éviter les collisions de noms et les failles de sécurité
     public String save(MultipartFile file) {
         try {
             String filename = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
@@ -37,6 +40,7 @@ public class FileStorageService {
         }
     }
 
+    // Récupère une ressource depuis le système de fichiers pour la retourner à l'utilisateur
     public Resource load(String filename) {
         try {
             Path file = root.resolve(filename);

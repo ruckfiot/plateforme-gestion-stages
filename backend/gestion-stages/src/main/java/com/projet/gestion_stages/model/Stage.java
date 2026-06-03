@@ -22,6 +22,7 @@ public class Stage {
     private LocalDate dateSoutenance;
     private LocalDate dateLimiteRapport;
     
+    // Relie le stage aux quatre entités métier fondamentales pour garantir l'intégrité du suivi
     @ManyToOne
     @JoinColumn(name = "idApprenant")
     private Apprenant apprenant;

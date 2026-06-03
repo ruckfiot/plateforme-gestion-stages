@@ -17,6 +17,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
+// ORCHESTRATEUR CENTRAL : Ce contrôleur est le carrefour métier de l'application, croisant les logiques de stages, rapports et soutenances
 @RestController
 @RequestMapping("/api/stages")
 @CrossOrigin(origins = "*")
@@ -36,6 +37,7 @@ public class StageController {
         this.soutenanceService = soutenanceService;
     }
 
+    // ROUTAGE SÉCURITAIRE DYNAMIQUE : Analyse les "authorities" du jeton JWT injecté pour retourner une liste filtrée selon le privilège du demandeur sans multiplier les endpoints
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<Stage>> getAll(
@@ -70,6 +72,7 @@ public class StageController {
     }
 
     // ADMIN: CREATE
+    // JOINTURE MULTIPLE : Construit le graphe d'entités en liant simultanément l'étudiant, le tuteur et l'entreprise au nouveau stage via les paramètres optionnels
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> create(
@@ -86,7 +89,7 @@ public class StageController {
     }
 
     // ADMIN: UPDATE
-    @PutMapping("/{id}")
+        @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> update(
             @PathVariable Long id,
@@ -100,6 +103,7 @@ public class StageController {
     }
 
     // ADMIN/TUTEUR: État
+    // MUTATION CIBLÉE (PATCH-LIKE) : Expose une route spécifique pour modifier uniquement l'état d'avancement du stage, allégeant ainsi le trafic réseau
     @PutMapping("/{id}/etat")
     @PreAuthorize("hasRole('ADMIN') or hasRole('ENSEIGNANT')")
     public ResponseEntity<Map<String, Object>> updateEtat(@PathVariable Long id, @RequestBody Map<String, String> body) {
@@ -136,6 +140,7 @@ public class StageController {
     }
 
     // TUTEUR: Ses stages
+    // EXTRACTION D'IDENTITÉ INTRINSÈQUE : Utilise le contexte de sécurité auth.getName() pour interroger la base sans jamais forcer le client à envoyer son propre ID (Anti-Usurpation)
     @GetMapping("/tuteur")
     @PreAuthorize("hasRole('ENSEIGNANT')")
     public ResponseEntity<List<Stage>> getTuteurStages(Authentication auth) {
@@ -154,6 +159,7 @@ public class StageController {
     }
 
     // ROUTE 1 : Pour l'UPLOAD (Sécurisée avec Authentication)
+    // La transmission de l'objet Authentication au service permet de certifier que c'est bien l'auteur légitime qui dépose le document
     @PostMapping("/{id}/rapport")
     @PreAuthorize("hasRole('APPRENANT')")
     public ResponseEntity<?> uploadRapport(@PathVariable Long id, @RequestParam("file") MultipartFile file, Authentication auth) {
@@ -168,6 +174,7 @@ public class StageController {
     }
 
     // ROUTE 2 : Pour la LECTURE (Le professeur télécharge/lit)
+    // La directive "inline" dans l'entête HTTP demande explicitement au navigateur d'afficher le PDF dans son lecteur natif plutôt que de le télécharger en arrière-plan
     @GetMapping("/rapports/{nomFichier}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Resource> lireRapport(@PathVariable String nomFichier) {
@@ -202,6 +209,7 @@ public class StageController {
     }
 
     // SUPPRIMER RAPPORT
+    // Utilise l'interface standard 'Principal' de Java Security (plus légère qu'Authentication) pour identifier l'utilisateur effectuant la suppression
     @DeleteMapping("/{id}/rapport")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> supprimerRapport(@PathVariable Long id, Principal principal) {

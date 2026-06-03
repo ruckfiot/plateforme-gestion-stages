@@ -11,6 +11,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/entreprises")
 @CrossOrigin(origins = "*")
+// SÉCURITÉ GLOBALE : Appliquer @PreAuthorize au niveau de la classe verrouille instantanément toutes les routes de ce contrôleur pour le seul rôle ADMIN
 @PreAuthorize("hasRole('ADMIN')")
 public class EntrepriseController {
     
@@ -25,6 +26,7 @@ public class EntrepriseController {
         return ResponseEntity.ok(service.getAllEntreprises());
     }
     
+    // RECHERCHE DYNAMIQUE : Capture l'argument via @RequestParam (ex: /search?query=ESEO) pour optimiser le filtrage directement côté serveur
     @GetMapping("/search")
     public ResponseEntity<List<Entreprise>> search(@RequestParam String query) {
         return ResponseEntity.ok(service.searchEntreprises(query));
@@ -37,6 +39,7 @@ public class EntrepriseController {
                 .orElse(ResponseEntity.notFound().build());
     }
     
+    // WRAPPER JSON FLEXIBLE : Utilise Map.of() pour forger une réponse JSON enrichie contenant un statut explicite de succès en plus de la donnée métier
     @PostMapping
     public ResponseEntity<Map<String, Object>> create(@RequestBody Entreprise entreprise) {
         try {
@@ -47,6 +50,7 @@ public class EntrepriseController {
         }
     }
     
+    // COMPOSITION FONCTIONNELLE : Chaîne l'API Optional pour transformer l'entité mise à jour directement en un dictionnaire JSON structuré
     @PutMapping("/{id}")
     public ResponseEntity<Map<String, Object>> update(@PathVariable Long id, @RequestBody Entreprise details) {
         return service.updateEntreprise(id, details)

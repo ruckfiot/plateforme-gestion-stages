@@ -23,6 +23,11 @@ public interface StageRepository extends JpaRepository<Stage, Long> {
     // Par état
     List<Stage> findByEtat(String etat);
     
+
+    // !!! OPTIMISATION HIBERNATE (JOINTURE FETCH) : La requête critique qui évite le problème N+1.
+    // Au lieu de faire une requête pour le stage + une requête par relation (Apprenant, Tuteur, Entreprise), 
+    // on récupère tout en une seule requête SQL performante via LEFT JOIN FETCH.
+    
     // Stage complet avec relations (évite N+1)
     @Query("SELECT s FROM Stage s " +
            "LEFT JOIN FETCH s.apprenant a " +

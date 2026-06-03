@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 
+// Implémente UserDetailsService pour fournir à Spring Security les données de connexion nécessaires à l'authentification
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
 
@@ -20,6 +21,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         this.utilisateurRepository = utilisateurRepository;
     }
 
+    // Méthode appelée par l'AuthenticationManager lors du login pour vérifier l'existence de l'utilisateur
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         // On cherche l'utilisateur par email dans la base XAMPP

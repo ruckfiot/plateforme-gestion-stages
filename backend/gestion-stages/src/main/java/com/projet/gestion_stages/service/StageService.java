@@ -15,7 +15,9 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.io.IOException;
 
+// Service central qui coordonne les actions sur les stages, rapports et soutenances
 @Service
+// Assure l'atomicité des opérations. Si une méthode échoue au milieu de son exécution, toutes les requêtes SQL précédentes de la méthode sont annulées (rollback)
 @Transactional
 public class StageService {
     
@@ -83,6 +85,7 @@ public class StageService {
     }
     
     // CREATE stage (Admin + popup)
+    // Association dynamique des différentes entités et initialisation automatique du statut du workflow à "EN_COURS"
     public Stage createStage(Stage stage, Long idApprenant, Long idTuteur, Long idEntreprise) {
         if (idApprenant != null) {
             stage.setApprenant(apprenantRepository.findById(idApprenant).orElseThrow());
@@ -100,6 +103,7 @@ public class StageService {
     }
     
     // UPDATE stage complet (Admin)
+    // Met à jour les infos du stage et orchestre intelligemment la création ou la mise à jour de l'entité Soutenance qui lui est liée
     public Optional<Stage> updateStage(Long id, Stage details, Long idApprenant, Long idTuteur, Long idEntreprise) {
         return stageRepository.findById(id).map(stage -> {
             stage.setSujet(details.getSujet()); 
@@ -130,7 +134,6 @@ public class StageService {
                 
                 soutenanceRepository.save(soutenance);
             }
-            // --------------------------------------------------------
             
             if (idApprenant != null) {
                 stage.setApprenant(apprenantRepository.findById(idApprenant).orElseThrow());
@@ -170,7 +173,7 @@ public class StageService {
         });
     }
     
-    // Le dossier physique où seront stockés les PDF (il se créera à la racine de ton projet Java)
+    // Le dossier physique où seront stockés les PDF (il se créera à la racine du projet Java)
     private final String UPLOAD_DIR = "uploads/rapports/";
 
     // APPRENANT: Déposer rapport PDF (Physique + BDD)

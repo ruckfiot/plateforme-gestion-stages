@@ -10,6 +10,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import java.time.LocalDate;
 
+// FLUX BINAIRES : Contrôleur spécifique isolé des flux JSON standards pour traiter les requêtes lourdes (fichiers PDF) sans saturer la mémoire du serveur
 @RestController
 @RequestMapping("/api/rapports")
 @CrossOrigin(origins = "*")
@@ -23,6 +24,7 @@ public class RapportController {
         this.rapportRepository = rapportRepository;
     }
 
+    // INTERCEPTION MULTIPART : Spring extrait nativement le flux binaire (FormData) envoyé par la requête Axios depuis l'interface client
     @PostMapping("/upload")
     public ResponseEntity<?> uploadRapport(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
@@ -30,17 +32,17 @@ public class RapportController {
         }
 
         try {
-            // 1. Sauvegarde physique du PDF via le service
+            // Sauvegarde physique du PDF via le service
             String filename = fileStorageService.save(file);
 
-            // 2. Création de l'objet Rapport pour la base de données
+            // Création de l'objet Rapport pour la base de données
             Rapport rapport = new Rapport();
             
             rapport.setNomFichier(filename); 
             rapport.setDateDepot(LocalDate.now()); // On enregistre la date du jour automatiquement
             rapport.setEtat("EN_ATTENTE"); // On met un statut par défaut
             
-            // 3. Sauvegarde en base de données
+            // Sauvegarde en base de données
             rapportRepository.save(rapport);
 
             return ResponseEntity.ok("Fichier '" + file.getOriginalFilename() + "' téléchargé avec succès sous le nom : " + filename);
@@ -54,14 +56,14 @@ public class RapportController {
     @GetMapping("/download/{id}")
     public ResponseEntity<Resource> downloadRapport(@PathVariable Long id) {
         try {
-            // 1. Trouver le rapport dans la base de données grâce à son ID
+            // Trouver le rapport dans la base de données grâce à son ID
             Rapport rapport = rapportRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Rapport introuvable avec l'ID : " + id));
 
-            // 2. Aller chercher le fichier physique sur le disque dur
+            // Aller chercher le fichier physique sur le disque dur
             Resource file = fileStorageService.load(rapport.getNomFichier());
 
-            // 3. Renvoyer le fichier avec l'en-tête spécial qui force le navigateur à lancer un téléchargement
+            // Renvoyer le fichier avec l'en-tête spécial qui force le navigateur à lancer un téléchargement
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFilename() + "\"")
                     .body(file);

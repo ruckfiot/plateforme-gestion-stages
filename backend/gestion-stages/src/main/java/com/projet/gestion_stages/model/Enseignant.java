@@ -18,6 +18,7 @@ public class Enseignant {
     private String matricule;
     private String specialite;
     private String matiere;
+    //  Statut métier (EN_ATTENTE) pour valider l'habilitation des enseignants avant leur activation sur la plateforme
     private String statut = "EN_ATTENTE";
 
     // Liaison vers le compte de connexion
@@ -30,6 +31,7 @@ public class Enseignant {
     @JoinColumn(name = "idAdmin")
     private Administrateur administrateur;
 
+    // Utilise une table de jointure "affectation_module" pour lier dynamiquement les enseignants à leurs modules académiques
     @ManyToMany
     @JoinTable(
         name = "affectation_module",
@@ -38,6 +40,7 @@ public class Enseignant {
     )
     private List<Module> modulesEnseignes;
 
+    // Évite une boucle infinie lors du rendu JSON en ignorant la liste des stages encadrés par l'enseignant
     @OneToMany(mappedBy = "tuteur")
     @JsonIgnore
     private List<Stage> stagesEncadres;

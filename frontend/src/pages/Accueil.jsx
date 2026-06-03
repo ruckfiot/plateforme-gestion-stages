@@ -30,7 +30,7 @@ const Accueil = () => {
     localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
-  // !!! REQUÊTES ASYNCHRONES : Chargement conditionnel des données selon le rôle de l'utilisateur extrait du token
+  // REQUÊTES ASYNCHRONES : Chargement conditionnel des données selon le rôle de l'utilisateur extrait du token
   useEffect(() => {
     const fetchDashboardData = async () => {
     setLoading(true);
@@ -43,13 +43,13 @@ const Accueil = () => {
         const apprenantsDb = await utilisateurService.getApprenants();
         const profsDb = await utilisateurService.getEnseignants();
         
-        // !!! LOGIQUE FILTRAGE : Agrégation dynamique des comptes apprenants et tuteurs bloqués en 'EN_ATTENTE'
+        // LOGIQUE FILTRAGE : Agrégation dynamique des comptes apprenants et tuteurs bloqués en 'EN_ATTENTE'
         const nbAttente = apprenantsDb.filter(a => a.statut === 'EN_ATTENTE').length + profsDb.filter(p => p.statut === 'EN_ATTENTE').length;;
 
         setAdminStats({
           stages: stagesDb.length,
           entreprises: entreprisesDb.length,
-          utilisateurs: apprenantsDb.length + profsDb.length, // Le vrai calcul !
+          utilisateurs: apprenantsDb.length + profsDb.length,
           attente: nbAttente
         });
       }
@@ -155,7 +155,7 @@ const getMessageActualite = () => {
     // Rendu de la liste
     return messages.map((msg, index) => (
       <li key={index} style={{ marginBottom: '10px' }}>
-        {/* CORRECTION ICI : On vérifie que c'est bien du texte avant d'utiliser includes() */}
+        {/* On vérifie que c'est bien du texte avant d'utiliser includes() */}
         {typeof msg === 'string' && msg.includes("Soutenance programmée") ? (
           <span style={{ color: '#f39c12', fontWeight: 'bold' }}>{msg}</span>
         ) : (
@@ -171,7 +171,7 @@ const getMessageActualite = () => {
 
   // --- RENDU : APPRENANT ---
   const renderApprenantDashboard = () => {
-    // 1. On extrait les notes s'il y a un stage et si les évaluations existent
+    // On extrait les notes s'il y a un stage et si les évaluations existent
     const rapport = monStage?.rapports && monStage.rapports.length > 0 ? monStage.rapports[0] : null;
     const soutenance = monStage?.soutenances && monStage.soutenances.length > 0 ? monStage.soutenances[0] : null;
 
@@ -346,7 +346,7 @@ const getMessageActualite = () => {
         </div>
         <div style={{ display: 'flex', gap: '15px' }}>
           <button 
-            onClick={() => setIsSettingsOpen(true)} // <-- MODIFIE JUSTE CETTE LIGNE
+            onClick={() => setIsSettingsOpen(true)}
             style={{ padding: '10px', backgroundColor: '#34495e', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             title="Paramètres"
           >

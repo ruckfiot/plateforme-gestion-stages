@@ -24,16 +24,19 @@ import java.util.Collections;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    // HASHAGE SÉCURISÉ : Bean de cryptage utilisant l'algorithme BCrypt, standard de l'industrie pour les mots de passe
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // GESTIONNAIRE D'AUTHENTIFICATION : Composant central qui valide les credentials (email/mot de passe)
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
 
+    // Définit les autorisations pour le frontend React (localhost:5173), évitant les blocages de sécurité navigateur
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -54,6 +57,7 @@ public class SecurityConfig {
         return new AuthTokenFilter();
     }
 
+    // Configuration principale du firewall applicatif
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -61,13 +65,14 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // --- ROUTES PUBLIQUES ---
+                // --- ROUTES OUVERTE ---
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                
+                // --- PROTECTION GLOBALE ---
                 .anyRequest().authenticated()
             )
+            // FILTRAGE : Ajout du filtre JWT avant le filtre d'authentification classique
             .addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+// Centralise la gestion des apprenants et garantit l'intégrité relationnelle avec les promotions et les comptes utilisateurs
 @Service
 public class ApprenantService {
 
@@ -24,9 +25,9 @@ public class ApprenantService {
         return apprenantRepository.findAll();
     }
 
-    // On garde ta signature avec idPromotion
+    // Associe l'apprenant à sa promotion dès sa création pour assurer une intégrité immédiate
     public Apprenant createApprenant(Apprenant apprenant, Long idPromotion) {
-        // --- NOUVEAUTÉ : Gestion de la promotion à la création ---
+        
         if (idPromotion != null) {
             PromotionFiliere promo = promotionRepository.findById(idPromotion)
                     .orElseThrow(() -> new RuntimeException("Promotion introuvable"));
@@ -35,14 +36,14 @@ public class ApprenantService {
         return apprenantRepository.save(apprenant);
     }
     
-    // FUSION : On garde ton idPromotion + numEtudiant, ET la validation du main
+    // Gère la synchronisation bidirectionnelle entre le statut de l'apprenant et son compte utilisateur
     public Optional<Apprenant> updateApprenant(Long id, Apprenant details, Long idPromotion) {
         return apprenantRepository.findById(id).map(apprenant -> {
             apprenant.setNomApprenant(details.getNomApprenant());
             apprenant.setPrenomApprenant(details.getPrenomApprenant());
-            apprenant.setNumEtudiant(details.getNumEtudiant()); // Ta modification
+            apprenant.setNumEtudiant(details.getNumEtudiant()); 
             
-            // Modification venant du main : On valide aussi le compte de connexion !
+            // Mise à jour du statut dans le profil Apprenant ET dans l'entité Utilisateur liée
             if(details.getStatut() != null) {
                 apprenant.setStatut(details.getStatut());
                 if (apprenant.getUtilisateur() != null) {
@@ -50,7 +51,7 @@ public class ApprenantService {
                 }
             }
 
-            // --- NOUVEAUTÉ : Gestion de la promotion à la modification ---
+            // Gestion dynamique du changement de promotion ou détachement
             if (idPromotion != null) {
                 PromotionFiliere promo = promotionRepository.findById(idPromotion)
                         .orElseThrow(() -> new RuntimeException("Promotion introuvable"));
@@ -58,7 +59,6 @@ public class ApprenantService {
             } else {
                 apprenant.setPromotion(null);
             }
-            // -------------------------------------------------------------
             
             return apprenantRepository.save(apprenant);
         });

@@ -16,6 +16,7 @@ public class Module {
     private String code;
     private String libelle;
 
+    // L'attribut "mappedBy" indique que la relation est gérée par l'attribut "modulesEnseignes" situé dans l'entité Enseignant
     @ManyToMany(mappedBy = "modulesEnseignes")
     @JsonIgnore
     private List<Enseignant> enseignants;

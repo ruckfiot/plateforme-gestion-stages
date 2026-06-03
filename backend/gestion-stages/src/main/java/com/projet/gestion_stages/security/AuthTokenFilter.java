@@ -14,6 +14,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+// Filtre de sécurité interceptant chaque requête HTTP entrante.
+// Il assure l'authentification stateless en validant le jeton JWT et en injectant 
+// l'utilisateur dans le contexte de sécurité de Spring.
 public class AuthTokenFilter extends OncePerRequestFilter {
 
     @Autowired
@@ -26,19 +29,19 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         try {
-            // 1. On récupère le token dans la requête
+            // On récupère le token dans la requête
             String jwt = parseJwt(request);
             
-            // 2. Si on a un token et qu'il est valide
+            // Si on a un token et qu'il est valide
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
                 
-                // 3. On extrait l'email
+                // On extrait l'email
                 String email = jwtUtils.getEmailFromJwtToken(jwt);
 
-                // 4. On charge l'utilisateur depuis la base de données
+                // On charge l'utilisateur depuis la base de données
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
                 
-                // 5. On dit à Spring "C'est bon, laisse-le passer, je le connais !"
+                // On dit à Spring "C'est bon, laisse-le passer, je le connais !"
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

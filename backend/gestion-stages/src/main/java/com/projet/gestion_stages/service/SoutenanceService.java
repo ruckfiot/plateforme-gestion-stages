@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+// Assure la planification, le suivi et la notation des soutenances de stage
 @Service
 public class SoutenanceService {
 
@@ -28,6 +29,7 @@ public class SoutenanceService {
         return repository.save(soutenance);
     }
 
+    // Permet de modifier les détails logistiques (date, salle)
     public Optional<Soutenance> updateSoutenance(Long id, Soutenance detailsSoutenance) {
         return repository.findById(id).map(soutenance -> {
             soutenance.setDateSoutenance(detailsSoutenance.getDateSoutenance());
@@ -36,11 +38,12 @@ public class SoutenanceService {
         });
     }
 
-    // ✅ ÉVALUER LA SOUTENANCE
+    // Traitement spécifique pour la saisie des notes et commentaires par le jury
     public Soutenance evaluerSoutenance(Long id, Map<String, Object> evaluation) {
         Soutenance soutenance = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Soutenance non trouvée"));
 
+        // Conversion sécurisée des données venant de la requête (Map générique)
         if (evaluation.get("noteSoutenance") != null) {
             soutenance.setNoteSoutenance(Double.parseDouble(evaluation.get("noteSoutenance").toString()));
         }

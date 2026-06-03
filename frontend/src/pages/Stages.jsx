@@ -224,7 +224,7 @@ const handleUploadRapport = async (e) => {
     const etatActuel = (stage.etat || 'EN_ATTENTE').toUpperCase();
 
     // On détecte l'état "TERMINE"
-    // CORRECTIF RE-RENDU : Détecte directement TERMINE/VALIDE pour empêcher l'écrasement visuel s'il manque des notes
+    // Détecte directement TERMINE/VALIDE pour empêcher l'écrasement visuel s'il manque des notes
     if (etatActuel === 'TERMINE' || etatActuel === 'VALIDE') {
       return <span style={{ backgroundColor: '#27ae60', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>TERMINÉ</span>;
     }
@@ -246,7 +246,7 @@ const handleUploadRapport = async (e) => {
 
     // Détection de l'attente
     if (etatActuel === 'EN_ATTENTE') {
-      return <span style={{ backgroundColor: '#d35400', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>EN ATTENTE</span>;
+      return <span style={{ backgroundColor: '#d35400', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>EN ATTENTE</span>;
     }
     let bgColor = '#3498db';
     let texteAffiche = 'EN COURS';

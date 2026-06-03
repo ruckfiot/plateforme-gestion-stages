@@ -7,9 +7,10 @@ import java.util.List;
 
 @Repository
 public interface EntrepriseRepository extends JpaRepository<Entreprise, Long> {
-    // Recherche pour champ recherche
+    // Méthode utilisant la dérivation pour générer une clause WHERE complexe avec OR et ignoreCase, idéale pour les barres de recherche "tout terrain"
     List<Entreprise> findByRaisonSocialeContainingIgnoreCaseOrAdresseContainingIgnoreCaseOrContactContainingIgnoreCase(
             String raisonSociale, String adresse, String contact);
     
+    // Méthode utilitaire pour le filtrage par nom exact (ou partiel) lors de la saisie utilisateur
     List<Entreprise> findByRaisonSocialeContainingIgnoreCase(String raisonSociale);
 }

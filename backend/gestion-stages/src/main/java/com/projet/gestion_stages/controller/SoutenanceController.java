@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+// API DE PLANIFICATION : Point d'entrée orchestrant le calendrier des jurys et le rattachement des notes orales aux profils étudiants
 @RestController
 @RequestMapping("/api/soutenances")
 @CrossOrigin(origins = "*")
@@ -19,13 +20,13 @@ public class SoutenanceController {
         this.soutenanceService = soutenanceService;
     }
 
-    // 1. Voir le planning des soutenances (Tout le monde)
+    // Voir le planning des soutenances (Tout le monde)
     @GetMapping
     public List<Soutenance> getAllSoutenances() {
         return soutenanceService.getAllSoutenances();
     }
 
-    // 2. Voir les détails d'une soutenance
+    // Voir les détails d'une soutenance
     @GetMapping("/{id}")
     public ResponseEntity<Soutenance> getSoutenanceById(@PathVariable Long id) {
         return soutenanceService.getSoutenanceById(id)
@@ -33,7 +34,7 @@ public class SoutenanceController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // 3. Programmer une nouvelle soutenance (Admin ou Enseignant)
+    // Programmer une nouvelle soutenance (Admin ou Enseignant)
     @PostMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('ENSEIGNANT')")
     public ResponseEntity<?> createSoutenance(@RequestBody Soutenance soutenance) {
@@ -45,7 +46,7 @@ public class SoutenanceController {
         }
     }
 
-    // 4. Modifier une date ou une salle de soutenance
+    // Modifier une date ou une salle de soutenance
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('ENSEIGNANT')")
     public ResponseEntity<?> updateSoutenance(@PathVariable Long id, @RequestBody Soutenance detailsSoutenance) {
@@ -54,7 +55,7 @@ public class SoutenanceController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // 5. ÉVALUER LA SOUTENANCE (Note + Commentaire)
+    // ÉVALUER LA SOUTENANCE (Note + Commentaire)
     @PostMapping("/{id}/evaluer")
     @PreAuthorize("hasRole('ENSEIGNANT') or hasRole('ADMIN')")
     public ResponseEntity<?> evaluerSoutenance(@PathVariable Long id, @RequestBody Map<String, Object> evaluation) {
@@ -66,7 +67,7 @@ public class SoutenanceController {
         }
     }
 
-    // 6. Annuler/Supprimer une soutenance
+    // Annuler/Supprimer une soutenance
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteSoutenance(@PathVariable Long id) {

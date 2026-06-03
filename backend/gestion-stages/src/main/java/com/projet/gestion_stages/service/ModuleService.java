@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+// Assure la gestion centralisée du référentiel des modules de formation
 @Service
 public class ModuleService {
 
@@ -15,10 +16,12 @@ public class ModuleService {
         this.moduleRepository = moduleRepository;
     }
 
+    // Accès à l'ensemble du catalogue des modules disponibles
     public List<Module> getAllModules() {
         return moduleRepository.findAll();
     }
 
+    // Enregistrement d'un nouveau module dans le catalogue académique
     public Module createModule(Module module) {
         return moduleRepository.save(module);
     }

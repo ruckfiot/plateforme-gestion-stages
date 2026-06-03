@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+// Assure la gestion centralisée du référentiel des entreprises partenaires
 @Service
 public class EntrepriseService {
     
@@ -23,6 +24,7 @@ public class EntrepriseService {
         return repository.findById(id);
     }
     
+    // Méthode intelligente qui bascule entre liste complète et filtrage multi-champs selon l'input utilisateur
     public List<Entreprise> searchEntreprises(String query) {
         if (query == null || query.trim().isEmpty()) {
             return repository.findAll();
@@ -35,6 +37,7 @@ public class EntrepriseService {
         return repository.save(entreprise);
     }
     
+    // Mapping des champs modifiables pour garantir que seules les données autorisées sont persistées
     public Optional<Entreprise> updateEntreprise(Long id, Entreprise details) {
         return repository.findById(id).map(entreprise -> {
             entreprise.setRaisonSociale(details.getRaisonSociale());
