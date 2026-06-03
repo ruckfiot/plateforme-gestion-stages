@@ -2,8 +2,7 @@ package com.projet.gestion_stages.controller;
 
 import com.projet.gestion_stages.model.Stage;
 import com.projet.gestion_stages.service.*;
-
-// --- LES IMPORTS CORRIGÉS ---
+import java.security.Principal;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -17,17 +16,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-// -----------------------------
 
 @RestController
 @RequestMapping("/api/stages")
 @CrossOrigin(origins = "*")
 public class StageController {
-    
+
     private final StageService stageService;
     private final RapportService rapportService;
     private final SoutenanceService soutenanceService;
-    
+
     public StageController(
         StageService stageService, 
         RapportService rapportService, 
@@ -37,20 +35,40 @@ public class StageController {
         this.rapportService = rapportService;
         this.soutenanceService = soutenanceService;
     }
-    
-    // ADMIN: TOUS les stages
+
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Stage>> getAll(@RequestParam(required = false) String id) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<Stage>> getAll(
+            @RequestParam(required = false) String id,
+            Authentication auth) {
+        
         if (id != null && !id.isEmpty()) {
             return stageService.getStageById(Long.parseLong(id))
                     .map(List::of)
                     .map(ResponseEntity::ok)
                     .orElse(ResponseEntity.ok(List.of()));
         }
-        return ResponseEntity.ok(stageService.getAllStages());
+        
+        // Si ADMIN : tous les stages
+        if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+            return ResponseEntity.ok(stageService.getAllStages());
+        }
+        
+        // Si ENSEIGNANT : ses stages
+        if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ENSEIGNANT"))) {
+            Long idTuteur = stageService.getEnseignantIdByEmail(auth.getName());
+            return ResponseEntity.ok(stageService.getStagesByTuteur(idTuteur));
+        }
+        
+        // Si APPRENANT : ses stages
+        if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_APPRENANT"))) {
+            Long idApprenant = stageService.getApprenantIdByEmail(auth.getName());
+            return ResponseEntity.ok(stageService.getStagesByApprenant(idApprenant));
+        }
+        
+        return ResponseEntity.ok(List.of());
     }
-    
+
     // ADMIN: CREATE
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -66,7 +84,7 @@ public class StageController {
             return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
         }
     }
-    
+
     // ADMIN: UPDATE
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
@@ -80,7 +98,7 @@ public class StageController {
                 .map(stage -> ResponseEntity.ok(Map.of("success", true, "stage", stage)))
                 .orElse(ResponseEntity.notFound().build());
     }
-    
+
     // ADMIN/TUTEUR: État
     @PutMapping("/{id}/etat")
     @PreAuthorize("hasRole('ADMIN') or hasRole('ENSEIGNANT')")
@@ -89,7 +107,7 @@ public class StageController {
                 .map(stage -> ResponseEntity.ok(Map.of("success", true, "stage", stage)))
                 .orElse(ResponseEntity.notFound().build());
     }
-    
+
     // ADMIN: Affectations
     @PostMapping("/{id}/affecter-apprenant")
     @PreAuthorize("hasRole('ADMIN')")
@@ -98,7 +116,7 @@ public class StageController {
                 .map(stage -> ResponseEntity.ok(Map.of("success", true, "stage", stage)))
                 .orElse(ResponseEntity.badRequest().build());
     }
-    
+
     @PostMapping("/{id}/affecter-tuteur")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> affecterTuteur(@PathVariable Long id, @RequestParam Long idTuteur) {
@@ -106,7 +124,7 @@ public class StageController {
                 .map(stage -> ResponseEntity.ok(Map.of("success", true, "stage", stage)))
                 .orElse(ResponseEntity.badRequest().build());
     }
-    
+
     // ADMIN: Delete
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
@@ -116,7 +134,7 @@ public class StageController {
         }
         return ResponseEntity.notFound().build();
     }
-    
+
     // TUTEUR: Ses stages
     @GetMapping("/tuteur")
     @PreAuthorize("hasRole('ENSEIGNANT')")
@@ -125,7 +143,7 @@ public class StageController {
         Long idTuteur = stageService.getEnseignantIdByEmail(email);
         return ResponseEntity.ok(stageService.getStagesByTuteur(idTuteur));
     }
-    
+
     // APPRENANT: Ses stages
     @GetMapping("/apprenant")
     @PreAuthorize("hasRole('APPRENANT')")
@@ -134,9 +152,10 @@ public class StageController {
         Long idApprenant = stageService.getApprenantIdByEmail(email);
         return ResponseEntity.ok(stageService.getStagesByApprenant(idApprenant));
     }
-    
-// ROUTE 1 : Pour l'UPLOAD (Sécurisée avec Authentication)
+
+    // ROUTE 1 : Pour l'UPLOAD (Sécurisée avec Authentication)
     @PostMapping("/{id}/rapport")
+    @PreAuthorize("hasRole('APPRENANT')")
     public ResponseEntity<?> uploadRapport(@PathVariable Long id, @RequestParam("file") MultipartFile file, Authentication auth) {
         try {
             // auth.getName() récupère automatiquement l'email du token JWT
@@ -150,6 +169,7 @@ public class StageController {
 
     // ROUTE 2 : Pour la LECTURE (Le professeur télécharge/lit)
     @GetMapping("/rapports/{nomFichier}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Resource> lireRapport(@PathVariable String nomFichier) {
         try {
             Path filePath = Paths.get("uploads/rapports/").resolve(nomFichier).normalize();
@@ -176,6 +196,18 @@ public class StageController {
         try {
             stageService.evaluerStage(id, evaluation);
             return ResponseEntity.ok(Map.of("success", true, "message", "Évaluation enregistrée"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    // SUPPRIMER RAPPORT
+    @DeleteMapping("/{id}/rapport")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> supprimerRapport(@PathVariable Long id, Principal principal) {
+        try {
+            stageService.supprimerRapport(id, principal.getName());
+            return ResponseEntity.ok(Map.of("success", true, "message", "Rapport supprimé avec succès"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
         }

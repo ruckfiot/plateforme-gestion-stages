@@ -214,6 +214,35 @@ public class StageService {
         stage.setEtat("RAPPORT_DEPOSE");
         stageRepository.save(stage);
     }
+
+    // APPRENANT: Supprimer son rapport (fichier physique + BDD)
+public void supprimerRapport(Long idStage, String emailApprenant) throws IOException {
+    Long idApprenant = getApprenantIdByEmail(emailApprenant);
+
+    Stage stage = stageRepository.findByIdWithRelations(idStage)
+            .orElseThrow(() -> new RuntimeException("Stage " + idStage + " non trouvé"));
+
+    if (!stage.getApprenant().getIdApprenant().equals(idApprenant)) {
+        throw new RuntimeException("Accès refusé au stage " + idStage);
+    }
+
+    if (stage.getRapports() == null || stage.getRapports().isEmpty()) {
+        throw new RuntimeException("Aucun rapport à supprimer pour ce stage.");
+    }
+
+    Rapport rapport = stage.getRapports().get(0);
+
+    // Suppression du fichier physique
+    Path filePath = Paths.get(UPLOAD_DIR).resolve(rapport.getNomFichier());
+    Files.deleteIfExists(filePath);
+
+    // Suppression en base
+    rapportRepository.delete(rapport);
+
+    // Remise de l'état du stage à EN_COURS
+    stage.setEtat("EN_COURS");
+    stageRepository.save(stage);
+}
     
     // ADMIN: Delete stage + cascade
     public boolean deleteStage(Long id) {
@@ -236,7 +265,7 @@ public class StageService {
             Rapport rapport = stage.getRapports().get(0);
             
             if (evaluation.containsKey("noteRapport") && evaluation.get("noteRapport") != null && !evaluation.get("noteRapport").toString().isEmpty()) {
-                rapport.setNoteRapport(Double.parseDouble(evaluation.get("noteRapport").toString()));
+                rapport.setNoteRapport(((Number) evaluation.get("noteRapport")).doubleValue());
             }
             if (evaluation.containsKey("commentaire") && evaluation.get("commentaire") != null) {
                 rapport.setCommentaire(evaluation.get("commentaire").toString());
@@ -258,7 +287,7 @@ public class StageService {
                     .orElse(new Soutenance()); 
             
             if (evaluation.containsKey("noteSoutenance") && evaluation.get("noteSoutenance") != null && !evaluation.get("noteSoutenance").toString().isEmpty()) {
-                soutenance.setNoteSoutenance(Double.parseDouble(evaluation.get("noteSoutenance").toString()));
+                soutenance.setNoteSoutenance(((Number) evaluation.get("noteSoutenance")).doubleValue());
             }
             if (evaluation.containsKey("commentaireSoutenance") && evaluation.get("commentaireSoutenance") != null) {
                 soutenance.setCommentaireSoutenance(evaluation.get("commentaireSoutenance").toString());

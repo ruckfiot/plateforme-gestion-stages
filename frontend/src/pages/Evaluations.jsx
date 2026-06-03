@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import authService from '../services/authService';
 import stageService from '../services/stageService';
+import soutenanceService from '../services/soutenanceService'; 
 
 const Evaluations = () => {
   const navigate = useNavigate();
@@ -13,11 +14,13 @@ const Evaluations = () => {
   const [stages, setStages] = useState([]);
   const [stageSelectionne, setStageSelectionne] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [noteRapport, setNoteRapport] = useState('');
   const [commentaireRapport, setCommentaireRapport] = useState(''); 
   const [noteSoutenance, setNoteSoutenance] = useState('');
-  const [commentaireSoutenance, setCommentaireSoutenance] = useState(''); 
+  const [commentaireSoutenance, setCommentaireSoutenance] = useState('');
+  const [soutenanceId, setSoutenanceId] = useState(null);
 
   const handleLogout = () => {
     authService.logout();
@@ -46,7 +49,8 @@ const Evaluations = () => {
             }
             if (soutenance) {
               setNoteSoutenance(soutenance.noteSoutenance || '');
-              setCommentaireSoutenance(soutenance.commentaireSoutenance || ''); 
+              setCommentaireSoutenance(soutenance.commentaireSoutenance || '');
+              setSoutenanceId(soutenance.idSoutenance);
             }
           }
         }
@@ -60,7 +64,7 @@ const Evaluations = () => {
     fetchDonnees();
   }, [stageIdParam]);
 
-  // --- NOUVEAUTÉ : FONCTION POUR OUVRIR LE PDF ---
+  //  FONCTION POUR OUVRIR LE PDF
   const ouvrirPDF = async (nomFichier) => {
     try {
       const blob = await stageService.lireRapport(nomFichier);
@@ -74,18 +78,31 @@ const Evaluations = () => {
 
   const handleEnregistrerNotes = async () => {
     try {
-      await stageService.evaluerStage(stageIdParam, {
-        noteRapport: noteRapport,
-        commentaire: commentaireRapport,
-        noteSoutenance: noteSoutenance,
-        commentaireSoutenance: commentaireSoutenance
-      });
+      setSaving(true);
+
+      // Sauvegarder le rapport
+      if (noteRapport || commentaireRapport) {
+        await stageService.evaluerStage(stageIdParam, {
+          noteRapport: noteRapport !== '' ? parseFloat(noteRapport) : null,
+          commentaire: commentaireRapport,
+        });
+      }
+
+      // SAUVEGARDER LA SOUTENANCE
+      if (soutenanceId && (noteSoutenance || commentaireSoutenance)) {
+        await soutenanceService.evaluerSoutenance(soutenanceId, {
+          noteSoutenance: noteSoutenance !== '' ? parseFloat(noteSoutenance) : null,
+          commentaireSoutenance: commentaireSoutenance,
+        });
+      }
 
       alert("Évaluations enregistrées avec succès !");
-      navigate(-1); 
+      navigate('/accueil');
     } catch (error) {
       console.error("Erreur lors de l'enregistrement :", error);
       alert("Une erreur est survenue lors de la sauvegarde.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -185,11 +202,13 @@ const Evaluations = () => {
           <div style={{ display: 'flex', gap: '15px', marginTop: '30px' }}>
             <button 
               onClick={handleEnregistrerNotes} 
+              disabled={saving}
               style={{ padding: '12px 25px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
               Enregistrer l'évaluation
             </button>
             <button 
-              onClick={() => navigate(-1)}
+              onClick={() => navigate('/accueil')} 
+              disabled={saving}
               style={{ padding: '12px 25px', backgroundColor: '#7f8c8d', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
               Annuler
             </button>

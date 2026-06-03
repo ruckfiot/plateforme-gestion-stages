@@ -239,7 +239,8 @@ const handleUploadRapport = async (e) => {
     if (etatActuel === 'EN_ATTENTE') {
       return <span style={{ backgroundColor: '#d35400', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>EN ATTENTE</span>;
     }
-
+    let bgColor = '#3498db';
+    let texteAffiche = 'EN COURS';
     // 4. Par défaut, pour tout le reste (et donc ton "EN_COURS")
     return (
       <span style={{ backgroundColor: '#2980b9', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>
