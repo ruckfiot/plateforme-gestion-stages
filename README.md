@@ -37,15 +37,96 @@ Il y a 3 rôles dans l'application, chacun avec son interface adaptée :
 
 ```
 plateforme-gestion-stages/
+│
 ├── backend/
-│   └── gestion-stages/        # Projet Spring Boot
-│       ├── src/main/java/...  # Controllers, Services, Models, Repositories
-│       └── src/main/resources/application.properties
-└── frontend/                  # App React (Vite)
-    ├── src/pages/             # Accueil, Login, Stages, Utilisateurs, Entreprises, Evaluations
-    ├── src/services/          # Appels API (axios)
-    └── src/components/        # ProtectedRoute, etc.
+│   └── gestion-stages/                 # Projet Spring Boot (Maven)
+│       ├── .mvn/wrapper/
+│       ├── src/
+│       │   ├── main/
+│       │   │   ├── java/com/projet/gestion_stages/
+│       │   │   │   ├── controller/     # Endpoints REST
+│       │   │   │   │   ├── AdministrateurController.java
+│       │   │   │   │   ├── ApprenantController.java
+│       │   │   │   │   ├── AuthController.java
+│       │   │   │   │   ├── EnseignantController.java
+│       │   │   │   │   ├── EntrepriseController.java
+│       │   │   │   │   ├── ModuleController.java
+│       │   │   │   │   ├── PromotionFiliereController.java
+│       │   │   │   │   ├── RapportController.java
+│       │   │   │   │   ├── SoutenanceController.java
+│       │   │   │   │   └── StageController.java
+│       │   │   │   ├── dto/            # Objets de transfert
+│       │   │   │   │   ├── JwtResponse.java
+│       │   │   │   │   ├── LoginRequest.java
+│       │   │   │   │   └── RegisterRequest.java
+│       │   │   │   ├── model/          # Entités JPA
+│       │   │   │   │   ├── Administrateur.java
+│       │   │   │   │   ├── Apprenant.java
+│       │   │   │   │   ├── Enseignant.java
+│       │   │   │   │   ├── Entreprise.java
+│       │   │   │   │   ├── Module.java
+│       │   │   │   │   ├── PromotionFiliere.java
+│       │   │   │   │   ├── Rapport.java
+│       │   │   │   │   ├── Role.java
+│       │   │   │   │   ├── Soutenance.java
+│       │   │   │   │   ├── Stage.java
+│       │   │   │   │   └── Utilisateur.java
+│       │   │   │   ├── repository/     # Accès BDD (Spring Data JPA)
+│       │   │   │   ├── service/        # Logique métier
+│       │   │   │   │   ├── EntrepriseService.java
+│       │   │   │   │   ├── FileStorageService.java
+│       │   │   │   │   ├── ModuleService.java
+│       │   │   │   │   ├── PromotionFiliereService.java
+│       │   │   │   │   ├── RapportService.java
+│       │   │   │   │   ├── SoutenanceService.java
+│       │   │   │   │   └── StageService.java
+│       │   │   │   └── config/         # Sécurité, JWT, CORS
+│       │   │   └── resources/
+│       │   │       └── application.properties
+│       │   └── test/
+│       │       └── java/com/projet/gestion_stages/
+│       │           └── GestionStagesApplicationTests.java
+│       ├── mvnw / mvnw.cmd
+│       └── pom.xml
+│
+├── frontend/                           # Application React (Vite)
+│   ├── public/
+│   │   ├── favicon.svg
+│   │   └── icons.svg
+│   ├── src/
+│   │   ├── assets/                     # Images (hero, logos…)
+│   │   ├── components/
+│   │   │   └── ProtectedRoute.jsx      # Garde des routes selon le rôle
+│   │   ├── pages/                      # Vues principales
+│   │   │   ├── Accueil.jsx
+│   │   │   ├── Entreprises.jsx
+│   │   │   ├── Evaluations.jsx
+│   │   │   ├── Login.jsx
+│   │   │   ├── Stages.jsx
+│   │   │   └── Utilisateurs.jsx
+│   │   ├── services/                   # Appels API (axios)
+│   │   │   ├── api.js
+│   │   │   ├── authService.js
+│   │   │   ├── entrepriseService.js
+│   │   │   ├── soutenanceService.js
+│   │   │   ├── stageService.js
+│   │   │   └── utilisateurService.js
+│   │   ├── App.jsx
+│   │   ├── App.css
+│   │   ├── index.css
+│   │   └── main.jsx
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package.json
+│   └── vite.config.js
+│
+├── uploads/
+│   └── rapports/                       # Stockage local des PDF déposés
+│
+├── .gitignore
+└── README.md
 ```
+
 
 ## Lancer le projet en local
 
@@ -63,14 +144,6 @@ Créer une base MySQL :
 CREATE DATABASE gestion_stages;
 ```
 
-Puis configurer les identifiants dans `backend/gestion-stages/src/main/resources/application.properties` :
-
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/gestion_stages
-spring.datasource.username=root
-spring.datasource.password=VOTRE_MDP
-```
-
 ### 2. Backend
 
 ```bash
@@ -80,7 +153,7 @@ cd backend/gestion-stages
 
 Le serveur démarre sur `http://localhost:8080`.
 
-Au premier lancement, un jeu de données de test est inséré automatiquement (admin, enseignants, promotions, etc.).
+Au premier lancement, un jeu de données de test est inséré automatiquement avec notre DataInitializer(admin, enseignants, promotions, etc.).
 
 **Compte admin par défaut :**
 - email : `admin@start.com`
@@ -94,7 +167,7 @@ npm install
 npm run dev
 ```
 
-L'interface est dispo sur `http://localhost:5173`.
+L'interface est disponible sur `http://localhost:5173`.
 
 ## Authentification
 
