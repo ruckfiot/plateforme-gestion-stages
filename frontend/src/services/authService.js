@@ -13,8 +13,7 @@ const login = async (email, password) => {
   return response.data;
 };
 
-// ---> NOUVELLE FONCTION D'INSCRIPTION <---
-const register = async (nom, prenom, email, motDePasse, role) => {
+const register = async ({ nom, prenom, email, motDePasse, role }) => {
   const response = await axios.post(`${API_URL}/register`, {
     nom,
     prenom,

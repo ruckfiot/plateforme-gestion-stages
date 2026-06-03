@@ -214,6 +214,7 @@ public class StageService {
         stage.setEtat("RAPPORT_DEPOSE");
         stageRepository.save(stage);
     }
+
     // APPRENANT: Supprimer son rapport (fichier physique + BDD)
 public void supprimerRapport(Long idStage, String emailApprenant) throws IOException {
     Long idApprenant = getApprenantIdByEmail(emailApprenant);
@@ -242,7 +243,6 @@ public void supprimerRapport(Long idStage, String emailApprenant) throws IOExcep
     stage.setEtat("EN_COURS");
     stageRepository.save(stage);
 }
-
     
     // ADMIN: Delete stage + cascade
     public boolean deleteStage(Long id) {
@@ -265,7 +265,7 @@ public void supprimerRapport(Long idStage, String emailApprenant) throws IOExcep
             Rapport rapport = stage.getRapports().get(0);
             
             if (evaluation.containsKey("noteRapport") && evaluation.get("noteRapport") != null && !evaluation.get("noteRapport").toString().isEmpty()) {
-                rapport.setNoteRapport(Double.parseDouble(evaluation.get("noteRapport").toString()));
+                rapport.setNoteRapport(((Number) evaluation.get("noteRapport")).doubleValue());
             }
             if (evaluation.containsKey("commentaire") && evaluation.get("commentaire") != null) {
                 rapport.setCommentaire(evaluation.get("commentaire").toString());
@@ -287,7 +287,7 @@ public void supprimerRapport(Long idStage, String emailApprenant) throws IOExcep
                     .orElse(new Soutenance()); 
             
             if (evaluation.containsKey("noteSoutenance") && evaluation.get("noteSoutenance") != null && !evaluation.get("noteSoutenance").toString().isEmpty()) {
-                soutenance.setNoteSoutenance(Double.parseDouble(evaluation.get("noteSoutenance").toString()));
+                soutenance.setNoteSoutenance(((Number) evaluation.get("noteSoutenance")).doubleValue());
             }
             if (evaluation.containsKey("commentaireSoutenance") && evaluation.get("commentaireSoutenance") != null) {
                 soutenance.setCommentaireSoutenance(evaluation.get("commentaireSoutenance").toString());
@@ -296,6 +296,7 @@ public void supprimerRapport(Long idStage, String emailApprenant) throws IOExcep
             soutenance.setStage(stage);
             soutenanceRepository.save(soutenance);
         }
+        
         // ========================================================
         // 4. VALIDATION FINALE DU STAGE
         // ========================================================
