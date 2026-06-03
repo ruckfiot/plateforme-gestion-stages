@@ -243,7 +243,7 @@ const handleUploadRapport = async (e) => {
     let texteAffiche = 'EN COURS';
     // 4. Par défaut, pour tout le reste (et donc ton "EN_COURS")
     return (
-      <span style={{ backgroundColor: '#2980b9', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>
+      <span style={{ backgroundColor: '#2980b9', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
         EN COURS
       </span>
     );
