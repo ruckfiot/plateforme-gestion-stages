@@ -20,7 +20,14 @@ public class Utilisateur {
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    // Par défaut, toute création de compte est mise "EN_ATTENTE"
+    // Par défaut, un compte créé est mis "EN_ATTENTE"
     @Column(nullable = false)
     private String statut = "EN_ATTENTE";
+    // Les admins contournent l'attente (obligatoire pour le DataInitializer)
+    public void setRole(Role role) {
+        this.role = role;
+        if (Role.ADMIN.equals(role)) {
+            this.statut = "ACTIVE";
+        }
+    }
 }

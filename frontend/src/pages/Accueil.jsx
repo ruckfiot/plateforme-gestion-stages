@@ -44,8 +44,8 @@ const Accueil = () => {
         const apprenantsDb = await utilisateurService.getApprenants();
         const profsDb = await utilisateurService.getEnseignants();
         
-        // On compte automatiquement ceux qui sont "EN_ATTENTE"
-        const nbAttente = apprenantsDb.filter(a => a.statut === 'EN_ATTENTE').length;
+        // On compte automatiquement ceux qui sont "EN_ATTENTE (apprenants + profs = total)
+        const nbAttente = apprenantsDb.filter(a => a.statut === 'EN_ATTENTE').length + profsDb.filter(p => p.statut === 'EN_ATTENTE').length;;
 
         setAdminStats({
           stages: stagesDb.length,
